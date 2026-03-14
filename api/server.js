@@ -16,7 +16,7 @@ app.use(express.static(path.resolve(__dirname, '../saveit-web/dist')))
 
 // PostgreSQL Database
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://keyurdesai@localhost:5432/saveit'
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres.jduwuuuacehyqmwfehzp:%40Keyur53987@aws-0-us-west-2.pooler.supabase.com:6543/postgres'
 })
 
 // Helper functions for queries

@@ -18,7 +18,7 @@ export default function Budgets() {
   const [editModal, setEditModal] = useState({ open: false, budget: null })
   const [expandedBudgets, setExpandedBudgets] = useState({})
   const [expandedLines, setExpandedLines] = useState({})
-  const [formData, setFormData] = useState({ month: new Date().getMonth() + 1, year: new Date().getFullYear(), lines: [{ categoryName: '', amount: '' }] })
+  const [formData, setFormData] = useState({ month: new Date().getMonth() + 1, year: new Date().getFullYear(), lines: [{ categoryId: '', amount: '' }] })
 
   useEffect(() => { loadData() }, [])
 
@@ -34,14 +34,15 @@ export default function Budgets() {
 
   const categoryMap = categories.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {})
 
-  const getSpentAmount = (categoryName, month, year) => {
+  const getSpentAmount = (categoryId, month, year) => {
+    const categoryName = categoryMap[categoryId]
     return transactions
       .filter(t => {
         const txnDate = new Date(t.date)
-        const txnCategoryName = t.categoryId ? categoryMap[t.categoryId] : null
+        const matchesById = t.categoryId === categoryId
+        const matchesByName = categoryName && t.categoryId && categoryMap[t.categoryId] === categoryName
         return t.amount < 0 && 
-               ((txnCategoryName && txnCategoryName.toLowerCase() === categoryName?.toLowerCase()) || 
-                t.description?.toLowerCase() === categoryName?.toLowerCase()) &&
+               (matchesById || matchesByName) &&
                txnDate.getMonth() + 1 === month &&
                txnDate.getFullYear() === year
       })
@@ -55,14 +56,15 @@ export default function Budgets() {
     return { status: 'ok', label: 'On track', color: colors.success }
   }
 
-  const getCategoryTransactions = (categoryName, month, year) => {
+  const getCategoryTransactions = (categoryId, month, year) => {
+    const categoryName = categoryMap[categoryId]
     return transactions
       .filter(t => {
         const txnDate = new Date(t.date)
-        const txnCategoryName = t.categoryId ? categoryMap[t.categoryId] : null
+        const matchesById = t.categoryId === categoryId
+        const matchesByName = categoryName && t.categoryId && categoryMap[t.categoryId] === categoryName
         return t.amount < 0 && 
-               ((txnCategoryName && txnCategoryName.toLowerCase() === categoryName?.toLowerCase()) || 
-                t.description?.toLowerCase() === categoryName?.toLowerCase()) &&
+               (matchesById || matchesByName) &&
                txnDate.getMonth() + 1 === month &&
                txnDate.getFullYear() === year
       })
@@ -82,11 +84,11 @@ export default function Budgets() {
     return b.month - a.month
   })
 
-  const handleAddLine = () => setFormData({ ...formData, lines: [...formData.lines, { categoryName: '', amount: '' }] })
+  const handleAddLine = () => setFormData({ ...formData, lines: [...formData.lines, { categoryId: '', amount: '' }] })
 
   const handleLineChange = (index, field, value) => {
     const newLines = [...formData.lines]
-    newLines[index][field] = value
+    newLines[index][field] = value === null ? '' : value
     setFormData({ ...formData, lines: newLines })
   }
 
@@ -94,9 +96,9 @@ export default function Budgets() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      const lines = formData.lines.map(l => ({ categoryId: l.categoryName, amount: parseFloat(l.amount) || 0 }))
+      const lines = formData.lines.map(l => ({ categoryId: l.categoryId, amount: parseFloat(l.amount) || 0 }))
       await api('/budgets', { method: 'POST', body: JSON.stringify({ month: parseInt(formData.month), year: parseInt(formData.year), lines }) })
-      setFormData({ month: new Date().getMonth() + 1, year: new Date().getFullYear(), lines: [{ categoryName: '', amount: '' }] })
+      setFormData({ month: new Date().getMonth() + 1, year: new Date().getFullYear(), lines: [{ categoryId: '', amount: '' }] })
       setShowForm(false)
       loadData()
     } catch (err) { alert(err.message) }
@@ -108,7 +110,10 @@ export default function Budgets() {
       open: true, 
       budget: { 
         ...budget, 
-        lines: budget.lines.map(l => ({ categoryName: l.categoryId || '', amount: l.amount || '' }))
+        lines: budget.lines.map(l => ({ 
+          categoryId: l.categoryId && categoryMap[l.categoryId] ? l.categoryId : (Object.keys(categoryMap).find(key => categoryMap[key] === l.categoryId) || l.categoryId || ''), 
+          amount: l.amount || '' 
+        }))
       } 
     })
   }
@@ -122,7 +127,7 @@ export default function Budgets() {
   const handleEditAddLine = () => {
     setEditModal({ 
       ...editModal, 
-      budget: { ...editModal.budget, lines: [...editModal.budget.lines, { categoryName: '', amount: '' }] }
+      budget: { ...editModal.budget, lines: [...editModal.budget.lines, { categoryId: '', amount: '' }] }
     })
   }
 
@@ -135,7 +140,7 @@ export default function Budgets() {
     if (!editModal.budget) return
     setSubmitting(true)
     try {
-      const lines = editModal.budget.lines.map(l => ({ categoryId: l.categoryName, amount: parseFloat(l.amount) || 0 }))
+      const lines = editModal.budget.lines.map(l => ({ categoryId: l.categoryId, amount: parseFloat(l.amount) || 0 }))
       await api(`/budgets/${editModal.budget.id}`, { 
         method: 'PUT', 
         body: JSON.stringify({ 
@@ -196,9 +201,9 @@ export default function Budgets() {
                 <Group key={i} gap="sm">
                   <Select
                     placeholder="Select category"
-                    data={categories.map(c => ({ value: c.name, label: c.name }))}
-                    value={line.categoryName}
-                    onChange={(val) => handleLineChange(i, 'categoryName', val)}
+                    data={categories.map(c => ({ value: c.id, label: c.name }))}
+                    value={line.categoryId}
+                    onChange={(val) => handleLineChange(i, 'categoryId', val)}
                     style={{ flex: 1 }}
                     searchable
                     clearable
@@ -229,7 +234,7 @@ export default function Budgets() {
       <SimpleGrid cols={{ base: 1, sm: 2 }}>
         {sortedBudgets.length > 0 ? sortedBudgets.map(budget => {
           const total = budget.lines.reduce((sum, l) => sum + (l.amount || 0), 0)
-          const totalSpent = budget.lines.reduce((sum, l) => sum + getSpentAmount(l.categoryName || l.categoryId, budget.month, budget.year), 0)
+          const totalSpent = budget.lines.reduce((sum, l) => sum + getSpentAmount(l.categoryId, budget.month, budget.year), 0)
           const overallStatus = getBudgetStatus(totalSpent, total)
           const isExpanded = expandedBudgets[budget.id] !== false
           const isPast = (new Date().getFullYear() > budget.year) || 
@@ -278,11 +283,12 @@ export default function Budgets() {
               
               <Stack gap="xs">
                 {budget.lines.map((line, i) => {
-                  const categoryKey = line.categoryName || line.categoryId
-                  const spent = getSpentAmount(categoryKey, budget.month, budget.year)
+                  const categoryId = line.categoryId
+                  const categoryName = categoryMap[categoryId] || categoryId || 'Unknown'
+                  const spent = getSpentAmount(categoryId, budget.month, budget.year)
                   const lineStatus = getBudgetStatus(spent, line.amount || 0)
                   const lineKey = `${budget.id}-${i}`
-                  const lineTxns = getCategoryTransactions(categoryKey, budget.month, budget.year)
+                  const lineTxns = getCategoryTransactions(categoryId, budget.month, budget.year)
                   const isExpanded = expandedLines[lineKey]
                   
                   return (
@@ -297,7 +303,7 @@ export default function Budgets() {
                           >
                             {isExpanded ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
                           </ActionIcon>
-                          <Text size="sm" c="dimmed">{line.categoryId}</Text>
+                          <Text size="sm" c="dimmed">{categoryName}</Text>
                           {lineStatus.status !== 'ok' && (
                             <IconAlertTriangle size={12} style={{ color: lineStatus.color }} />
                           )}
@@ -359,9 +365,9 @@ export default function Budgets() {
               <Group key={i} gap="sm">
                 <Select
                   placeholder="Select category"
-                  data={categories.map(c => ({ value: c.name, label: c.name }))}
-                  value={line.categoryName}
-                  onChange={(val) => handleEditLineChange(i, 'categoryName', val)}
+                  data={categories.map(c => ({ value: c.id, label: c.name }))}
+                  value={line.categoryId}
+                  onChange={(val) => handleEditLineChange(i, 'categoryId', val)}
                   style={{ flex: 1 }}
                   searchable
                   clearable

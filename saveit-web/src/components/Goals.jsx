@@ -108,8 +108,10 @@ export default function Goals() {
 
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
         {goals.length > 0 ? goals.map(goal => {
-          const progress = (goal.currentAmount / goal.targetAmount) * 100
-          const remaining = goal.targetAmount - goal.currentAmount
+          const currentAmt = goal.currentAmount || goal.currentamount || 0
+          const targetAmt = goal.targetAmount || goal.targetamount || 0
+          const progress = (currentAmt / targetAmt) * 100
+          const remaining = targetAmt - currentAmt
           return (
             <Card key={goal.id} shadow="sm" padding="lg" radius="md" withBorder>
               <Stack gap="sm">
@@ -124,8 +126,8 @@ export default function Goals() {
                 </Group>
                 
                 <Group align="baseline" gap="xs">
-                  <Text fw={700} style={{ fontSize: '1.5rem' }}>${goal.currentAmount?.toLocaleString()}</Text>
-                  <Text c="dimmed">/ ${goal.targetAmount?.toLocaleString()}</Text>
+                  <Text fw={700} style={{ fontSize: '1.5rem' }}>${currentAmt?.toLocaleString()}</Text>
+                  <Text c="dimmed">/ ${targetAmt?.toLocaleString()}</Text>
                 </Group>
                 
                 <Progress value={Math.min(progress, 100)} color={progress >= 100 ? 'green' : 'orange'} size="md" radius="xl" />

@@ -8,3 +8,5 @@ saveit-web/dist/
 saveit-web/node_modules/
 saveit-web/.vite/
 SaveItMobile/node_modules/
+dist/
+saveit-web/.vite/
