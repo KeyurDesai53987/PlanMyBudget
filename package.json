@@ -9,8 +9,8 @@
     "start": "electron .",
     "dev": "electron .",
     "build:web": "cd saveit-web && npm run build",
-    "build": "npm run build:web && electron-builder --mac",
-    "pack": "npm run build:web && electron-builder --dir"
+    "build:electron": "npm run build:web && electron-builder --mac",
+    "build": "npm run build:web"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
