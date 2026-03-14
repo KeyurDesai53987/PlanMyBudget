@@ -2,6 +2,12 @@
 
 A personal finance web app built with React, Mantine UI, and PostgreSQL.
 
+## Live Demo
+
+- **Frontend:** https://saveit.vercel.app
+- **Backend API:** https://saveit-r1gc.onrender.com
+- **Database:** Supabase (cloud)
+
 ## Features
 
 - Dashboard with charts (Income vs Expenses, Last 7 Days)
@@ -20,17 +26,19 @@ A personal finance web app built with React, Mantine UI, and PostgreSQL.
 
 - **Frontend:** React, Mantine UI, Recharts, Vite
 - **Backend:** Node.js, Express, PostgreSQL
-- **Database:** PostgreSQL (Supabase or local)
+- **Database:** PostgreSQL (Supabase)
+- **Deployment:** Vercel (frontend), Render (backend)
 - **Desktop:** Electron
 
 ## Getting Started
 
-### Prerequisites
+### Live App
 
-- Node.js 18+
-- PostgreSQL 16+ (or use Supabase)
+Simply visit: https://saveit.vercel.app
 
-### Option 1: Local Development
+Login with your credentials to start tracking your finances.
+
+### Local Development
 
 1. **Clone the repository:**
 ```bash
@@ -73,44 +81,41 @@ npm run dev
 
 Open http://localhost:5173
 
-### Option 2: Use Supabase (Cloud Database)
-
-1. Create a project at https://supabase.com
-2. Get your connection string from Settings → Database
-3. Update the connection string in `api/server.js` or set `DATABASE_URL` environment variable
-
-### Option 3: Desktop App (macOS)
-
-Download and run the app from `dist/mac-arm64/SaveIt.app`
-
-Requires PostgreSQL running locally or set `DATABASE_URL` to your Supabase connection string.
-
 ### Login
 
 - Email: demo@saveit.app
 - Password: password
 
+## Environment Variables
+
+For production, set the database URL:
+```bash
+export DATABASE_URL="postgresql://user:password@host:5432/postgres"
+```
+
 ## Deployment
 
 ### Frontend (Vercel)
 
-1. Go to https://vercel.com
-2. Import your GitHub repo (KeyurDesai53987/SaveIt)
-3. Settings:
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-4. Deploy
+The frontend is deployed at https://saveit.vercel.app
+
+To redeploy:
+1. Push changes to GitHub
+2. Vercel automatically deploys
 
 ### Backend (Render)
 
-1. Go to https://render.com
-2. Create New Web Service
-3. Connect your GitHub repo
-4. Settings:
-   - Build Command: (leave empty)
-   - Start Command: `node api/server.js`
-5. Add Environment Variable:
-   - `DATABASE_URL`: Your Supabase connection string
+The backend is deployed at https://saveit-r1gc.onrender.com
+
+To redeploy:
+1. Push changes to GitHub
+2. Render automatically deploys
+
+### Desktop App (macOS)
+
+Download from `dist/mac-arm64/SaveIt.app`
+
+Requires the backend to be running or set `DATABASE_URL` to your Supabase connection string.
 
 ## License
 
