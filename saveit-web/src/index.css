@@ -9,6 +9,7 @@ html { font-size: 16px; }
 body {
   font-family: var(--font);
   min-height: 100vh;
+  -webkit-text-size-adjust: 100%;
 }
 
 #root { min-height: 100vh; }
@@ -32,6 +33,33 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 12px;
+  }
+}
+
+/* Prevent iOS zoom on inputs */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  
+  .mantine-Input-input,
+  .mantine-TextInput-input,
+  .mantine-NumberInput-input,
+  .mantine-Select-input {
+    font-size: 16px !important;
+  }
 }
 
 /* Dark mode overrides */
