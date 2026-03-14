@@ -98,7 +98,7 @@ export default function Accounts() {
       {showForm && (
         <Card shadow="sm" padding="lg" radius="md" withBorder mb="lg">
           <Stack gap="md">
-            <SimpleGrid cols={4}>
+            <SimpleGrid cols={{ base: 2, sm: 4 }}>
               {ACCOUNT_TYPES.map(type => {
                 const Icon = type.icon
                 return (

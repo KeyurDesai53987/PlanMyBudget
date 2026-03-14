@@ -182,7 +182,7 @@ export default function Budgets() {
         <Card shadow="sm" padding="lg" radius="md" withBorder mb="lg">
           <form onSubmit={handleSubmit}>
             <Stack gap="md">
-              <SimpleGrid cols={2}>
+              <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <Select
                   label="Month"
                   data={months.map((m, i) => ({ value: String(i + 1), label: m }))}

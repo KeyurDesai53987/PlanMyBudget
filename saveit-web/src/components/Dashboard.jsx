@@ -9,22 +9,23 @@ const COLORS = [colors.primary, colors.success, colors.danger, colors.warning, c
 
 function StatCard({ label, value, icon: Icon, color }) {
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
+    <Card shadow="sm" padding="md" radius="md" withBorder>
       <Group justify="space-between" align="flex-start">
-        <div>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <Text size="xs" tt="uppercase" fw={600} c="dimmed">{label}</Text>
-          <Text size="xl" fw={700} style={{ fontSize: '1.5rem' }}>{value}</Text>
+          <Text size="lg" fw={700} style={{ fontSize: '1.1rem', wordBreak: 'break-word' }}>{value}</Text>
         </div>
         <div style={{
-          width: 40,
-          height: 40,
+          width: 36,
+          height: 36,
           borderRadius: 8,
           background: `${color}15`,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          flexShrink: 0
         }}>
-          <Icon size={20} style={{ color }} />
+          <Icon size={18} style={{ color }} />
         </div>
       </Group>
     </Card>

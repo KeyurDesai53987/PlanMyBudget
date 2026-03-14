@@ -282,7 +282,7 @@ export default function Transactions() {
 
   return (
     <div>
-      <Group justify="space-between" mb="md">
+      <Group justify="space-between" mb="md" wrap="wrap" gap="sm">
         <Text size="xl" fw={700} style={{ fontSize: '1.5rem' }}>Activity</Text>
         <Group gap="sm">
           <Menu shadow="md" width={200}>
@@ -308,81 +308,85 @@ export default function Transactions() {
       </Group>
 
       <Card shadow="sm" padding="sm" radius="md" withBorder mb="md">
-        <Group gap="sm" wrap="wrap">
+        <Stack gap="sm">
           <TextInput
             placeholder="Search..."
             leftSection={<IconSearch size={14} />}
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1) }}
-            style={{ width: 150 }}
-            size="xs"
+            style={{ width: '100%' }}
+            size="sm"
           />
           <SegmentedControl
-            size="xs"
+            size="sm"
             value={datePreset}
             onChange={(val) => { setDatePreset(val); if (val !== 'all') setCustomDateRange({ start: '', end: '' }) }}
             data={DATE_PRESETS}
+            fullWidth
           />
           {datePreset === 'all' && (
             <Group gap="xs">
               <TextInput
                 type="date"
-                size="xs"
+                size="sm"
                 placeholder="Start"
                 value={customDateRange.start}
                 onChange={(e) => setCustomDateRange({ ...customDateRange, start: e.target.value })}
-                style={{ width: 130 }}
+                style={{ flex: 1 }}
               />
               <Text size="xs" c="dimmed">to</Text>
               <TextInput
                 type="date"
-                size="xs"
+                size="sm"
                 placeholder="End"
                 value={customDateRange.end}
                 onChange={(e) => setCustomDateRange({ ...customDateRange, end: e.target.value })}
-                style={{ width: 130 }}
+                style={{ flex: 1 }}
               />
             </Group>
           )}
-        </Group>
+        </Stack>
       </Card>
 
       {accounts.length > 0 && (
         <Card shadow="sm" padding="sm" radius="md" withBorder mb="md">
           <form onSubmit={handleQuickAdd}>
-            <Group gap="xs" align="flex-end" wrap="wrap">
+            <Stack gap="sm">
               <SegmentedControl
-                size="xs"
+                size="sm"
                 value={quickType}
                 onChange={setQuickType}
                 data={[
                   { label: 'Expense', value: 'expense' },
                   { label: 'Income', value: 'income' },
                 ]}
+                fullWidth
               />
-              <NumberInput
-                placeholder="Amount"
-                value={quickAmount}
-                onChange={setQuickAmount}
-                min={0}
-                decimalScale={2}
-                style={{ width: 90 }}
-                hideControls
-                size="xs"
-              />
-              <Select
-                placeholder="Category"
-                data={categories.map(c => ({ value: c.id, label: c.name }))}
-                value={quickCategory}
-                onChange={setQuickCategory}
-                clearable
-                style={{ width: 120 }}
-                size="xs"
-              />
-              <Button type="submit" size="xs" color="gray" loading={submitting} disabled={!quickAmount}>
-                Add
-              </Button>
-            </Group>
+              <Group gap="xs" align="flex-end" wrap="wrap">
+                <NumberInput
+                  placeholder="Amount"
+                  value={quickAmount}
+                  onChange={setQuickAmount}
+                  min={0}
+                  decimalScale={2}
+                  style={{ flex: 1, minWidth: 80 }}
+                  hideControls
+                  size="sm"
+                />
+                <Select
+                  placeholder="Category"
+                  data={categories.map(c => ({ value: c.id, label: c.name }))}
+                  value={quickCategory}
+                  onChange={setQuickCategory}
+                  clearable
+                  style={{ flex: 1, minWidth: 100 }}
+                  size="sm"
+                />
+                <Button type="submit" size="sm" color="gray" loading={submitting} disabled={!quickAmount}>
+                  Add
+                </Button>
+              </Group>
+            </Stack>
           </form>
         </Card>
       )}

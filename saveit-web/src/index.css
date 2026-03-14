@@ -60,6 +60,17 @@ body {
   .mantine-Select-input {
     font-size: 16px !important;
   }
+  
+  /* Larger touch targets */
+  .mantine-Button-root {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Full width buttons on mobile */
+  .mantine-Button-root[data-fullwidth="true"] {
+    width: 100%;
+  }
 }
 
 /* Dark mode overrides */
