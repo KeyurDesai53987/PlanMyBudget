@@ -1,5 +1,0 @@
-{
-  "buildCommand": "cd saveit-web && npm run build",
-  "outputDirectory": "saveit-web/dist",
-  "installCommand": "cd saveit-web && npm install"
-}
