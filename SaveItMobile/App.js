@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ScrollView, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native'
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, ScrollView, Alert, Modal, KeyboardAvoidingView, Platform, Switch } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import axios from 'axios'
 
-const API_BASE = 'http://localhost:4000/api'
+const API_BASE = 'https://saveit-r1gc.onrender.com/api'
 
 // API Functions
 const getStoredToken = async () => AsyncStorage.getItem('saveit_token')
@@ -579,6 +579,304 @@ function GoalsScreen() {
   )
 }
 
+// Recurring Screen
+function RecurringScreen() {
+  const [recurring, setRecurring] = useState([])
+  const [accounts, setAccounts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [formData, setFormData] = useState({ accountId: '', name: '', amount: '', type: 'debit', frequency: 'monthly', startDate: new Date().toISOString().split('T')[0], description: '' })
+
+  useEffect(() => { loadData() }, [])
+
+  const loadData = async () => {
+    const [rec, accs] = await Promise.all([api('/recurring'), api('/accounts')])
+    setRecurring(rec.recurring || [])
+    setAccounts(accs.accounts || [])
+    if (accs.accounts?.length > 0) setFormData(prev => ({ ...prev, accountId: accs.accounts[0].id }))
+    setLoading(false)
+  }
+
+  const handleSubmit = async () => {
+    await api('/recurring', { body: JSON.stringify({ ...formData, amount: parseFloat(formData.amount) }) })
+    setFormData({ accountId: accounts[0]?.id || '', name: '', amount: '', type: 'debit', frequency: 'monthly', startDate: new Date().toISOString().split('T')[0], description: '' })
+    setShowForm(false)
+    loadData()
+  }
+
+  const handleToggle = async (id, active) => {
+    await api(`/recurring/${id}`, { body: JSON.stringify({ active: active ? 1 : 0 }) })
+    loadData()
+  }
+
+  const handleProcess = async (id) => {
+    await api(`/recurring/${id}/process`, { method: 'POST' })
+    Alert.alert('Success', 'Transaction created!')
+    loadData()
+  }
+
+  const handleDelete = async (id) => {
+    Alert.alert('Delete', 'Delete this recurring?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        await api(`/recurring/${id}`, { method: 'DELETE' })
+        loadData()
+      }}
+    ])
+  }
+
+  const frequencies = [
+    { value: 'daily', label: 'Daily' },
+    { value: 'weekly', label: 'Weekly' },
+    { value: 'biweekly', label: 'Bi-weekly' },
+    { value: 'monthly', label: 'Monthly' },
+    { value: 'yearly', label: 'Yearly' },
+  ]
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.pageTitle}>Recurring</Text>
+        <TouchableOpacity style={styles.addButton} onPress={() => setShowForm(!showForm)}>
+          <Text style={styles.addButtonText}>{showForm ? 'Cancel' : '+ New'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {showForm && (
+        <View style={styles.card}>
+          <TextInput style={styles.input} placeholder="Name (e.g., Netflix)" value={formData.name} onChangeText={v => setFormData({ ...formData, name: v })} />
+          <View style={styles.typeToggle}>
+            <TouchableOpacity style={[styles.typeToggleBtn, formData.type === 'debit' && styles.typeToggleBtnActive]} onPress={() => setFormData({ ...formData, type: 'debit' })}>
+              <Text style={[styles.typeToggleText, formData.type === 'debit' && styles.typeToggleTextActive]}>Expense</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.typeToggleBtn, formData.type === 'credit' && styles.typeToggleBtnActive]} onPress={() => setFormData({ ...formData, type: 'credit' })}>
+              <Text style={[styles.typeToggleText, formData.type === 'credit' && styles.typeToggleTextActive]}>Income</Text>
+            </TouchableOpacity>
+          </View>
+          <TextInput style={styles.input} placeholder="Amount" value={formData.amount} onChangeText={v => setFormData({ ...formData, amount: v })} keyboardType="numeric" />
+          <TextInput style={styles.input} placeholder="Frequency (monthly)" value={formData.frequency} onChangeText={v => setFormData({ ...formData, frequency: v })} />
+          <TextInput style={styles.input} placeholder="Description (optional)" value={formData.description} onChangeText={v => setFormData({ ...formData, description: v })} />
+          <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}><Text style={styles.primaryButtonText}>Create Recurring</Text></TouchableOpacity>
+        </View>
+      )}
+
+      <FlatList
+        data={recurring}
+        keyExtractor={item => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.recurringCard}>
+            <View style={styles.recurringInfo}>
+              <Text style={styles.recurringName}>{item.name}</Text>
+              <Text style={styles.recurringFreq}>{frequencies.find(f => f.value === item.frequency)?.label || item.frequency}</Text>
+              <Switch value={!!item.active} onValueChange={(val) => handleToggle(item.id, val)} />
+            </View>
+            <View style={styles.recurringActions}>
+              <Text style={[styles.recurringAmount, { color: item.amount >= 0 ? colors.iosGreen : colors.iosRed }]}>
+                {item.amount >= 0 ? '+' : '-'}${Math.abs(item.amount).toFixed(2)}
+              </Text>
+              <TouchableOpacity style={styles.processBtn} onPress={() => handleProcess(item.id)} disabled={!item.active}>
+                <Text style={styles.processBtnText}>▶</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDelete(item.id)}><Text style={styles.deleteBtn}>🗑️</Text></TouchableOpacity>
+            </View>
+          </View>
+        )}
+        ListEmptyComponent={<Text style={styles.noData}>No recurring transactions</Text>}
+      />
+    </SafeAreaView>
+  )
+}
+
+// Categories Screen
+function CategoriesScreen() {
+  const [categories, setCategories] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [formData, setFormData] = useState({ name: '' })
+
+  useEffect(() => { loadCategories() }, [])
+
+  const loadCategories = async () => {
+    const res = await api('/categories')
+    setCategories(res.categories || [])
+    setLoading(false)
+  }
+
+  const handleSubmit = async () => {
+    await api('/categories', { body: JSON.stringify({ name: formData.name }) })
+    setFormData({ name: '' })
+    setShowForm(false)
+    loadCategories()
+  }
+
+  const handleDelete = async (id) => {
+    Alert.alert('Delete', 'Delete this category?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        await api(`/categories/${id}`, { method: 'DELETE' })
+        loadCategories()
+      }}
+    ])
+  }
+
+  const categoryColors = ['#007aff', '#34c759', '#ff3b30', '#af52de', '#ff9500', '#5ac8fa', '#ff2d55', '#5856d6']
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.pageTitle}>Categories</Text>
+        <TouchableOpacity style={styles.addButton} onPress={() => setShowForm(!showForm)}>
+          <Text style={styles.addButtonText}>{showForm ? 'Cancel' : '+ Add'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {showForm && (
+        <View style={styles.card}>
+          <TextInput style={styles.input} placeholder="Category Name" value={formData.name} onChangeText={v => setFormData({ ...formData, name: v })} />
+          <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}><Text style={styles.primaryButtonText}>Add Category</Text></TouchableOpacity>
+        </View>
+      )}
+
+      <FlatList
+        data={categories}
+        keyExtractor={item => item.id}
+        renderItem={({ item, index }) => {
+          const color = categoryColors[index % categoryColors.length]
+          return (
+            <View style={styles.categoryCard}>
+              <View style={[styles.categoryIcon, { background: `${color}15` }]}>
+                <Text style={styles.categoryEmoji}>🏷️</Text>
+              </View>
+              <Text style={styles.categoryName}>{item.name}</Text>
+              <TouchableOpacity onPress={() => handleDelete(item.id)}><Text style={styles.deleteBtn}>🗑️</Text></TouchableOpacity>
+            </View>
+          )
+        }}
+        ListEmptyComponent={<Text style={styles.noData}>No categories</Text>}
+      />
+    </SafeAreaView>
+  )
+}
+
+// Settings Screen
+function SettingsScreen({ onLogout }) {
+  const [profile, setProfile] = useState({ email: '', name: '', createdAt: '' })
+  const [passwordData, setPasswordData] = useState({ current: '', new: '', confirm: '' })
+  const [message, setMessage] = useState({ type: '', text: '' })
+  const [showProfile, setShowProfile] = useState(true)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => { loadProfile() }, [])
+
+  const loadProfile = async () => {
+    try {
+      const res = await api('/profile')
+      setProfile({
+        email: res.preferences?.email || '',
+        name: res.preferences?.name || '',
+        createdAt: res.preferences?.createdAt || ''
+      })
+    } catch (e) { console.error(e) }
+  }
+
+  const handleProfileUpdate = async () => {
+    setSaving(true)
+    setMessage({ type: '', text: '' })
+    try {
+      await api('/profile', { method: 'PUT', body: JSON.stringify({ name: profile.name }) })
+      setMessage({ type: 'success', text: 'Profile saved!' })
+    } catch (e) {
+      setMessage({ type: 'error', text: e.message || 'Failed to save' })
+    }
+    setSaving(false)
+  }
+
+  const handlePasswordChange = async () => {
+    if (passwordData.new !== passwordData.confirm) {
+      setMessage({ type: 'error', text: 'Passwords do not match' })
+      return
+    }
+    if (passwordData.new.length < 6) {
+      setMessage({ type: 'error', text: 'Password must be at least 6 characters' })
+      return
+    }
+    setSaving(true)
+    setMessage({ type: '', text: '' })
+    try {
+      await api('/change-password', { method: 'PUT', body: JSON.stringify({ currentPassword: passwordData.current, newPassword: passwordData.new }) })
+      setMessage({ type: 'success', text: 'Password updated!' })
+      setPasswordData({ current: '', new: '', confirm: '' })
+    } catch (e) {
+      setMessage({ type: 'error', text: e.message || 'Failed to update password' })
+    }
+    setSaving(false)
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView>
+        <Text style={styles.pageTitle}>Settings</Text>
+
+        {message.text ? (
+          <View style={[styles.messageBox, { background: message.type === 'success' ? `${colors.iosGreen}15` : `${colors.iosRed}15` }]}>
+            <Text style={[styles.messageText, { color: message.type === 'success' ? colors.iosGreen : colors.iosRed }]}>{message.text}</Text>
+          </View>
+        ) : null}
+
+        <TouchableOpacity style={styles.sectionHeader} onPress={() => setShowProfile(!showProfile)}>
+          <Text style={styles.sectionTitle}>👤 Profile</Text>
+          <Text>{showProfile ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+        {showProfile && (
+          <View style={styles.card}>
+            <TextInput style={styles.input} placeholder="Name" value={profile.name} onChangeText={v => setProfile({ ...profile, name: v })} />
+            <TextInput style={styles.input} placeholder="Email" value={profile.email} editable={false} />
+            <TouchableOpacity style={styles.primaryButton} onPress={handleProfileUpdate} disabled={saving}>
+              <Text style={styles.primaryButtonText}>{saving ? 'Saving...' : 'Save'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <TouchableOpacity style={styles.sectionHeader} onPress={() => setShowPassword(!showPassword)}>
+          <Text style={styles.sectionTitle}>🔒 Password</Text>
+          <Text>{showPassword ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+        {showPassword && (
+          <View style={styles.card}>
+            <TextInput style={styles.input} placeholder="Current Password" value={passwordData.current} onChangeText={v => setPasswordData({ ...passwordData, current: v })} secureTextEntry />
+            <TextInput style={styles.input} placeholder="New Password" value={passwordData.new} onChangeText={v => setPasswordData({ ...passwordData, new: v })} secureTextEntry />
+            <TextInput style={styles.input} placeholder="Confirm Password" value={passwordData.confirm} onChangeText={v => setPasswordData({ ...passwordData, confirm: v })} secureTextEntry />
+            <TouchableOpacity style={styles.primaryButton} onPress={handlePasswordChange} disabled={saving || !passwordData.current || !passwordData.new || !passwordData.confirm}>
+              <Text style={styles.primaryButtonText}>{saving ? 'Updating...' : 'Update Password'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <TouchableOpacity style={styles.sectionHeader} onPress={() => setShowAbout(!showAbout)}>
+          <Text style={styles.sectionTitle}>ℹ️ About</Text>
+          <Text>{showAbout ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+        {showAbout && (
+          <View style={styles.card}>
+            <Text style={styles.appNameLarge}>💰 SaveIt</Text>
+            <Text style={styles.appTaglineLarge}>Personal Finance Tracker</Text>
+            <Text style={styles.versionText}>Version 1.0.0</Text>
+            <Text style={styles.aboutText}>SaveIt helps you track your income, expenses, budgets, and financial goals.</Text>
+            <Text style={styles.aboutText}>Built with React Native.</Text>
+            <Text style={styles.aboutText}>Developer: Keyur Desai</Text>
+          </View>
+        )}
+
+        <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
+          <Text style={styles.logoutButtonText}>Log Out</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  )
+}
+
 // Main App
 const Tab = createBottomTabNavigator()
 
@@ -612,18 +910,19 @@ export default function App() {
             headerShown: false,
             tabBarActiveTintColor: colors.iosBlue,
             tabBarInactiveTintColor: colors.iosText4,
-            tabBarStyle: { backgroundColor: colors.iosCard, borderTopColor: colors.iosSeparator },
+            tabBarStyle: { backgroundColor: colors.iosCard, borderTopColor: colors.iosSeparator, paddingBottom: 5, height: 60 },
+            tabBarLabelStyle: { fontSize: 11 },
           }}
         >
-          <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarLabel: 'Home' }} />
-          <Tab.Screen name="Accounts" component={AccountsScreen} />
-          <Tab.Screen name="Activity" component={TransactionsScreen} />
-          <Tab.Screen name="Budget" component={BudgetsScreen} />
-          <Tab.Screen name="Goals" component={GoalsScreen} />
+          <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarLabel: 'Home', tabBarIcon: () => <Text style={{fontSize:20}}>🏠</Text> }} />
+          <Tab.Screen name="Accounts" component={AccountsScreen} options={{ tabBarLabel: 'Accounts', tabBarIcon: () => <Text style={{fontSize:20}}>🏦</Text> }} />
+          <Tab.Screen name="Activity" component={TransactionsScreen} options={{ tabBarLabel: 'Activity', tabBarIcon: () => <Text style={{fontSize:20}}>💳</Text> }} />
+          <Tab.Screen name="Budget" component={BudgetsScreen} options={{ tabBarLabel: 'Budget', tabBarIcon: () => <Text style={{fontSize:20}}>📊</Text> }} />
+          <Tab.Screen name="Goals" component={GoalsScreen} options={{ tabBarLabel: 'Goals', tabBarIcon: () => <Text style={{fontSize:20}}>🎯</Text> }} />
+          <Tab.Screen name="Recurring" component={RecurringScreen} options={{ tabBarLabel: 'Recurring', tabBarIcon: () => <Text style={{fontSize:20}}>🔄</Text> }} />
+          <Tab.Screen name="Categories" component={CategoriesScreen} options={{ tabBarLabel: 'Categories', tabBarIcon: () => <Text style={{fontSize:20}}>🏷️</Text> }} />
+          <Tab.Screen name="Settings" component={() => <SettingsScreen onLogout={handleLogout} />} options={{ tabBarLabel: 'Settings', tabBarIcon: () => <Text style={{fontSize:20}}>⚙️</Text> }} />
         </Tab.Navigator>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutBtnText}>Log Out</Text>
-        </TouchableOpacity>
       </NavigationContainer>
     </SafeAreaProvider>
   )
@@ -1071,5 +1370,166 @@ const styles = StyleSheet.create({
   logoutBtnText: {
     color: colors.iosBlue,
     fontSize: 14,
+  },
+  recurringCard: {
+    backgroundColor: colors.iosCard,
+    padding: 14,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  recurringInfo: {
+    flex: 1,
+  },
+  recurringName: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  recurringFreq: {
+    fontSize: 12,
+    color: colors.iosText4,
+  },
+  recurringActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  recurringAmount: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  processBtn: {
+    backgroundColor: colors.iosGreen,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  processBtnText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  categoryCard: {
+    backgroundColor: colors.iosCard,
+    padding: 14,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  categoryIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  categoryEmoji: {
+    fontSize: 22,
+  },
+  categoryName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: colors.iosCard,
+    marginBottom: 1,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  messageBox: {
+    padding: 12,
+    borderRadius: 8,
+    margin: 16,
+    marginBottom: 0,
+  },
+  messageText: {
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  appNameLarge: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.iosBlue,
+    textAlign: 'center',
+  },
+  appTaglineLarge: {
+    fontSize: 15,
+    color: colors.iosText4,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  versionText: {
+    fontSize: 13,
+    color: colors.iosText4,
+    textAlign: 'center',
+    marginVertical: 8,
+  },
+  aboutText: {
+    fontSize: 14,
+    color: colors.iosText3,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  logoutButton: {
+    backgroundColor: colors.iosRed,
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    margin: 16,
+  },
+  logoutButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  typeToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.iosBg,
+    borderRadius: 8,
+    padding: 2,
+    marginBottom: 12,
+  },
+  typeToggleBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  typeToggleBtnActive: {
+    backgroundColor: colors.iosCard,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+  },
+  typeToggleText: {
+    fontSize: 14,
+    color: colors.iosText4,
+    fontWeight: '600',
+  },
+  typeToggleTextActive: {
+    color: colors.iosText,
+  },
+  deleteBtn: {
+    fontSize: 16,
   },
 })
