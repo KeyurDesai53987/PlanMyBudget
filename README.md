@@ -1,4 +1,4 @@
-# SaveIt - Personal Finance Tracker
+# PlanMyBudget - Personal Finance Tracker
 
 A personal finance web app built with React, Mantine UI, and PostgreSQL.
 
@@ -29,6 +29,7 @@ A personal finance web app built with React, Mantine UI, and PostgreSQL.
 - **Database:** PostgreSQL (Supabase)
 - **Deployment:** Vercel (frontend), Render (backend)
 - **Desktop:** Electron
+- **Mobile:** React Native (iOS)
 
 ## Getting Started
 
@@ -62,7 +63,7 @@ brew services start postgresql@16
 
 4. **Create database:**
 ```bash
-createdb saveit
+createdb planmybudget
 ```
 
 5. **Run the app:**
@@ -113,9 +114,13 @@ To redeploy:
 
 ### Desktop App (macOS)
 
-Download from `dist/mac-arm64/SaveIt.app`
+Download from `dist/mac-arm64/PlanMyBudget.app`
 
 Requires the backend to be running or set `DATABASE_URL` to your Supabase connection string.
+
+### Mobile App (iOS)
+
+The iOS app is built with React Native/Expo and can be run on iOS simulator or deployed to TestFlight/App Store.
 
 ## License
 

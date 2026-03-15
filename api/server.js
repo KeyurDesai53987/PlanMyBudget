@@ -771,7 +771,7 @@ app.get('*', (req, res) => {
 // Initialize and start server
 initDb().then(() => {
   const server = app.listen(PORT, () => {
-    console.log(`SaveIt API listening on http://localhost:${PORT}`)
+    console.log(`PlanMyBudget API listening on http://localhost:${PORT}`)
     console.log(`Database: PostgreSQL`)
   })
 

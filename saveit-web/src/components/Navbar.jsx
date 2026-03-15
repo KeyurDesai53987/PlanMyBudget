@@ -90,7 +90,7 @@ export default function Navbar({ onLogout }) {
         <Group justify="space-between" wrap="nowrap">
           <Group gap="xs" style={{ flexShrink: 0 }}>
             <IconWallet size={24} stroke={1.5} />
-            <Text fw={700} size="lg" style={{ whiteSpace: 'nowrap' }}>SaveIt</Text>
+            <Text fw={700} size="lg" style={{ whiteSpace: 'nowrap' }}>PlanMyBudget</Text>
           </Group>
           
           {!isMobile && (
@@ -124,7 +124,7 @@ export default function Navbar({ onLogout }) {
       <Drawer
         opened={opened}
         onClose={close}
-        title={<Group gap="xs"><IconWallet size={24} /> <Text fw={700}>SaveIt</Text></Group>}
+        title={<Group gap="xs"><IconWallet size={24} /> <Text fw={700}>PlanMyBudget</Text></Group>}
         size="280px"
         padding="md"
       >

@@ -68,7 +68,7 @@ function LoginScreen({ onLogin }) {
     <View style={styles.loginContainer}>
       <View style={styles.loginCard}>
         <Text style={styles.logo}>💰</Text>
-        <Text style={styles.appName}>SaveIt</Text>
+        <Text style={styles.appName}>PlanMyBudget</Text>
         <Text style={styles.appTagline}>Track your money with ease</Text>
         
         {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
@@ -860,10 +860,10 @@ function SettingsScreen({ onLogout }) {
         </TouchableOpacity>
         {showAbout && (
           <View style={styles.card}>
-            <Text style={styles.appNameLarge}>💰 SaveIt</Text>
+            <Text style={styles.appNameLarge}>💰 PlanMyBudget</Text>
             <Text style={styles.appTaglineLarge}>Personal Finance Tracker</Text>
             <Text style={styles.versionText}>Version 1.0.0</Text>
-            <Text style={styles.aboutText}>SaveIt helps you track your income, expenses, budgets, and financial goals.</Text>
+            <Text style={styles.aboutText}>PlanMyBudget helps you track your income, expenses, budgets, and financial goals.</Text>
             <Text style={styles.aboutText}>Built with React Native.</Text>
             <Text style={styles.aboutText}>Developer: Keyur Desai</Text>
           </View>

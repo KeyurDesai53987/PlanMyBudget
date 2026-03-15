@@ -188,12 +188,12 @@ export default function Settings() {
           </Group>
           <Collapse in={expanded.about}>
             <Stack gap="sm" p="md">
-              <Text size="lg" fw={700}>SaveIt</Text>
+              <Text size="lg" fw={700}>PlanMyBudget</Text>
               <Text size="sm" c="dimmed">Personal Finance Tracker</Text>
               <Text size="xs" c="dimmed">Version 1.0.0</Text>
               <Divider my="sm" />
               <Text size="sm">
-                SaveIt is a simple and intuitive personal finance management app that helps you track your income, expenses, budgets, and financial goals.
+                PlanMyBudget is a simple and intuitive personal finance management app that helps you track your income, expenses, budgets, and financial goals.
               </Text>
               <Text size="sm">
                 Built with React, Mantine UI, and SQLite.

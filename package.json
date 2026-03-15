@@ -1,6 +1,6 @@
 {
-  "name": "saveit-budget-app",
-  "productName": "SaveIt",
+  "name": "planmybudget-app",
+  "productName": "PlanMyBudget",
   "private": true,
   "version": "1.0.0",
   "description": "Personal Finance Tracker",
@@ -24,8 +24,8 @@
     "electron-builder": "^26.8.1"
   },
   "build": {
-    "appId": "com.saveit.app",
-    "productName": "SaveIt",
+    "appId": "com.planmybudget.app",
+    "productName": "PlanMyBudget",
     "asar": false,
     "directories": {
       "output": "dist"

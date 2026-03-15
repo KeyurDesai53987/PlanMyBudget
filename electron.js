@@ -95,7 +95,7 @@ function createWindow() {
       contextIsolation: true
     },
     titleBarStyle: 'hiddenInset',
-    title: 'SaveIt'
+    title: 'PlanMyBudget'
   })
 
   if (isDev) {

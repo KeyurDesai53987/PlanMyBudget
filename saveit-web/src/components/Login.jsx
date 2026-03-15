@@ -44,7 +44,7 @@ export default function Login({ onLogin }) {
         <Stack gap="md">
           <div style={{ textAlign: 'center' }}>
             <IconWallet size={48} stroke={1.5} style={{ marginBottom: 8, color: '#475569' }} />
-            <Text size="xl" fw={700} style={{ fontSize: '1.75rem' }}>SaveIt</Text>
+            <Text size="xl" fw={700} style={{ fontSize: '1.75rem' }}>PlanMyBudget</Text>
             <Text size="sm" c="dimmed">
               {isRegister ? 'Create your account' : 'Track your finances'}
             </Text>
