@@ -15,6 +15,7 @@
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
+    "electron-updater": "^6.8.3",
     "express": "^4.18.2",
     "pg": "^8.18.0",
     "uuid": "^9.0.0"
@@ -38,6 +39,11 @@
     ],
     "extraMetadata": {
       "main": "electron.js"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "KeyurDesai53987",
+      "repo": "SaveIt"
     },
     "mac": {
       "category": "public.app-category.finance",

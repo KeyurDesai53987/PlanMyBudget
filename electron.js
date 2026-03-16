@@ -2,6 +2,7 @@ const { app, BrowserWindow } = require('electron')
 const path = require('path')
 const { spawn } = require('child_process')
 const express = require('express')
+const { autoUpdater } = require('electron-updater')
 
 const isDev = !app.isPackaged
 
@@ -114,6 +115,7 @@ app.whenReady().then(() => {
   startWebServer()
   startAPI()
   createWindow()
+  setupAutoUpdater()
   
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -132,3 +134,39 @@ app.on('before-quit', () => {
   if (apiProcess) apiProcess.kill()
   if (webServer) webServer.close()
 })
+
+// Auto-update functionality
+function setupAutoUpdater() {
+  autoUpdater.logger = require('electron-log')
+  autoUpdater.logger.transports.file.level = 'info'
+  
+  autoUpdater.on('checking-for-update', () => {
+    console.log('Checking for updates...')
+  })
+  
+  autoUpdater.on('update-available', (info) => {
+    console.log('Update available:', info.version)
+  })
+  
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('No updates available')
+  })
+  
+  autoUpdater.on('download-progress', (progressObj) => {
+    console.log(`Download progress: ${progressObj.percent.toFixed(1)}%`)
+  })
+  
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('Update downloaded:', info.version)
+    autoUpdater.quitAndInstall()
+  })
+  
+  autoUpdater.on('error', (err) => {
+    console.error('Auto-update error:', err.message)
+  })
+  
+  // Check for updates (only in production)
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdatesAndNotify()
+  }
+}
