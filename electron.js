@@ -153,18 +153,20 @@ function setupAutoUpdater() {
     updateAvailable = true
     updateVersion = info.version
     
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: 'Update Available',
-      message: `A new version (${info.version}) is available. Would you like to download it now?`,
-      buttons: ['Download Now', 'Later'],
-      defaultId: 0,
-      cancelId: 1
-    }).then(result => {
-      if (result.response === 0) {
-        autoUpdater.downloadUpdate()
-      }
-    })
+    if (mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update Available',
+        message: `A new version (${info.version}) is available. Would you like to download it now?`,
+        buttons: ['Download Now', 'Later'],
+        defaultId: 0,
+        cancelId: 1
+      }).then(result => {
+        if (result.response === 0) {
+          autoUpdater.downloadUpdate()
+        }
+      })
+    }
   })
   
   autoUpdater.on('update-not-available', (info) => {
@@ -179,18 +181,20 @@ function setupAutoUpdater() {
   autoUpdater.on('update-downloaded', (info) => {
     console.log('Update downloaded:', info.version)
     
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: 'Update Ready',
-      message: `Version ${info.version} has been downloaded. Restart now to install?`,
-      buttons: ['Restart Now', 'Later'],
-      defaultId: 0,
-      cancelId: 1
-    }).then(result => {
-      if (result.response === 0) {
-        autoUpdater.quitAndInstall()
-      }
-    })
+    if (mainWindow) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update Ready',
+        message: `Version ${info.version} has been downloaded. Restart now to install?`,
+        buttons: ['Restart Now', 'Later'],
+        defaultId: 0,
+        cancelId: 1
+      }).then(result => {
+        if (result.response === 0) {
+          autoUpdater.quitAndInstall()
+        }
+      })
+    }
   })
   
   autoUpdater.on('error', (err) => {

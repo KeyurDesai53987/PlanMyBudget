@@ -16,7 +16,7 @@ app.use(express.static(path.resolve(__dirname, '../saveit-web/dist')))
 
 // PostgreSQL Database
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres.jduwuuuacehyqmwfehzp:%40Keyur53987@aws-0-us-west-2.pooler.supabase.com:6543/postgres'
+  connectionString: process.env.DATABASE_URL
 })
 
 // Helper functions for queries
@@ -371,6 +371,9 @@ app.put('/api/change-password', auth, async (req, res) => {
   }
   
   const user = await db.get('SELECT passwordhash FROM users WHERE id = $1', [req.userid])
+  if (!user) {
+    return res.status(404).json({ error: 'User not found' })
+  }
   const isValid = bcrypt.compareSync(currentPassword, user.passwordhash)
   
   if (!isValid) {
@@ -525,7 +528,13 @@ app.delete('/api/transactions/:id', auth, async (req, res) => {
 // Budgets
 app.get('/api/budgets', auth, async (req, res) => {
   const budgets = await db.all('SELECT * FROM budgets WHERE userid = $1', [req.userid])
-  const parsed = budgets.map(b => ({ ...b, lines: JSON.parse(b.lines || '[]') }))
+  const parsed = budgets.map(b => {
+    try {
+      return { ...b, lines: JSON.parse(b.lines || '[]') }
+    } catch {
+      return { ...b, lines: [] }
+    }
+  })
   res.json({ budgets: parsed })
 })
 
@@ -547,7 +556,7 @@ app.post('/api/budgets', auth, async (req, res) => {
     VALUES ($1, $2, $3, $4, $5, $6)
   `, [budget.id, budget.userid, budget.month, budget.year, budget.currency, budget.lines])
   
-  res.json({ budget: { ...budget, lines: JSON.parse(budget.lines) } })
+  res.json({ budget: { ...budget, lines: JSON.parse(budget.lines || '[]') } })
 })
 
 app.put('/api/budgets/:id', auth, async (req, res) => {
@@ -562,7 +571,11 @@ app.put('/api/budgets/:id', auth, async (req, res) => {
   if (Array.isArray(lines)) await db.run('UPDATE budgets SET lines = $1 WHERE id = $2', [JSON.stringify(lines), id])
   
   const updated = await db.get('SELECT * FROM budgets WHERE id = $1', [id])
-  res.json({ budget: { ...updated, lines: JSON.parse(updated.lines || '[]') } })
+  try {
+    res.json({ budget: { ...updated, lines: JSON.parse(updated.lines || '[]') } })
+  } catch {
+    res.json({ budget: { ...updated, lines: [] } })
+  }
 })
 
 app.delete('/api/budgets/:id', auth, async (req, res) => {

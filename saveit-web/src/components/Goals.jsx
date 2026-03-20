@@ -110,7 +110,7 @@ export default function Goals() {
         {goals.length > 0 ? goals.map(goal => {
           const currentAmt = goal.currentAmount || goal.currentamount || 0
           const targetAmt = goal.targetAmount || goal.targetamount || 0
-          const progress = (currentAmt / targetAmt) * 100
+          const progress = targetAmt > 0 ? (currentAmt / targetAmt) * 100 : 0
           const remaining = targetAmt - currentAmt
           return (
             <Card key={goal.id} shadow="sm" padding="lg" radius="md" withBorder>

@@ -56,7 +56,13 @@ export default function Dashboard() {
   const income = transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0)
   const expenses = transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
-  const recentTransactions = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5)
+  const recentTransactions = [...transactions].sort((a, b) => {
+    const dateA = new Date(a.date)
+    const dateB = new Date(b.date)
+    if (isNaN(dateA.getTime())) return 1
+    if (isNaN(dateB.getTime())) return -1
+    return dateB - dateA
+  }).slice(0, 5)
 
   const incomeVsExpenseData = [
     { name: 'Income', value: income },

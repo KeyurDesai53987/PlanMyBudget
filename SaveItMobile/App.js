@@ -19,7 +19,17 @@ const api = async (path, options = {}) => {
   if (token) headers['Authorization'] = `Bearer ${token}`
   headers['Content-Type'] = 'application/json'
   options.headers = headers
-  const res = await axios.post(API_BASE + path, options.body, { headers }).catch(() => null)
+  const method = options.method || 'GET'
+  let res
+  if (method === 'GET') {
+    res = await axios.get(API_BASE + path, { headers }).catch(() => null)
+  } else if (method === 'PUT') {
+    res = await axios.put(API_BASE + path, options.body, { headers }).catch(() => null)
+  } else if (method === 'DELETE') {
+    res = await axios.delete(API_BASE + path, { headers }).catch(() => null)
+  } else {
+    res = await axios.post(API_BASE + path, options.body, { headers }).catch(() => null)
+  }
   if (!res) return { data: { error: 'Network error' } }
   return res.data
 }
