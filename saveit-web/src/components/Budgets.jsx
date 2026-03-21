@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, ActionIcon, SimpleGrid, Loader, Center, Modal, Progress, Collapse, Badge, useMantineColorScheme } from '@mantine/core'
-import { IconPlus, IconTrash, IconCalendar, IconEdit, IconAlertTriangle, IconChevronDown, IconChevronUp, IconArrowDownRight } from '@tabler/icons-react'
+import { IconPlus, IconTrash, IconCalendar, IconEdit, IconAlertTriangle, IconChevronDown, IconChevronUp, IconArrowDownRight, IconRefresh } from '@tabler/icons-react'
 import { api } from '../api'
 import { colors } from '../theme'
 
@@ -13,6 +13,7 @@ export default function Budgets() {
   const [transactions, setTransactions] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [editModal, setEditModal] = useState({ open: false, budget: null })
@@ -20,16 +21,23 @@ export default function Budgets() {
   const [expandedLines, setExpandedLines] = useState({})
   const [formData, setFormData] = useState({ month: new Date().getMonth() + 1, year: new Date().getFullYear(), lines: [{ categoryId: '', amount: '' }] })
 
-  useEffect(() => { loadData() }, [])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [budgetRes, txnRes, catRes] = await Promise.all([api('/budgets'), api('/transactions'), api('/categories')])
       setBudgets(budgetRes.budgets || [])
       setTransactions(txnRes.transactions || [])
       setCategories(catRes.categories || [])
     } catch (err) { console.error(err) }
-    finally { setLoading(false) }
+    finally { setLoading(false); setRefreshing(false) }
+  }, [])
+
+  useEffect(() => { 
+    loadData() 
+  }, [loadData])
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await loadData()
   }
 
   const categoryMap = categories.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {})
@@ -174,7 +182,12 @@ export default function Budgets() {
   return (
     <div>
       <Group justify="space-between" mb="lg">
-        <Text size="xl" fw={700} style={{ fontSize: '1.5rem' }}>Budget</Text>
+        <Group gap="xs">
+          <Text size="xl" fw={700} style={{ fontSize: '1.5rem' }}>Budget</Text>
+          <ActionIcon variant="subtle" color="gray" onClick={handleRefresh} loading={refreshing}>
+            <IconRefresh size={18} />
+          </ActionIcon>
+        </Group>
         <Button variant="light" color="gray" leftSection={<IconPlus size={16} />} onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Cancel' : 'New'}
         </Button>
@@ -238,7 +251,8 @@ export default function Budgets() {
           const total = budget.lines.reduce((sum, l) => sum + (l.amount || 0), 0)
           const totalSpent = budget.lines.reduce((sum, l) => sum + getSpentAmount(l.categoryId, budget.month, budget.year), 0)
           const overallStatus = getBudgetStatus(totalSpent, total)
-          const isExpanded = expandedBudgets[budget.id] !== false
+          const currentMonth = new Date().getFullYear() === budget.year && new Date().getMonth() + 1 === budget.month
+          const isExpanded = expandedBudgets[budget.id] !== undefined ? expandedBudgets[budget.id] : currentMonth
           const isPast = (new Date().getFullYear() > budget.year) || 
                          (new Date().getFullYear() === budget.year && new Date().getMonth() + 1 > budget.month)
           
