@@ -3,6 +3,9 @@ const cors = require('cors')
 const path = require('path')
 const { v4: uuidv4 } = require('uuid')
 const { Pool } = require('pg')
+const nodemailer = require('nodemailer')
+const bcrypt = require('bcryptjs')
+const { OAuth2Client } = require('google-auth-library')
 
 const app = express()
 const PORT = process.env.PORT || 4000
@@ -10,6 +13,51 @@ const PORT = process.env.PORT || 4000
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+// Email transporter (configure your SMTP in environment variables)
+const transporter = nodemailer.createTransport({
+  service: process.env.EMAIL_SERVICE || 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+})
+
+// Google OAuth client
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+
+// OTP store (in production, use Redis or database)
+const otpStore = new Map()
+
+// Generate 6-digit OTP
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString()
+}
+
+// Send OTP email
+async function sendOTPEmail(email, otp) {
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER || 'noreply@planmybudget.app',
+      to: email,
+      subject: 'Your PlanMyBudget OTP',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #475569;">PlanMyBudget</h2>
+          <p>Your verification code is:</p>
+          <div style="background: #f3f4f6; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; border-radius: 8px;">
+            ${otp}
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">This code expires in 10 minutes.</p>
+        </div>
+      `
+    })
+    return true
+  } catch (err) {
+    console.log('Email send failed (email may not be configured):', err.message)
+    return false
+  }
+}
 
 // Serve static web UI
 app.use(express.static(path.resolve(__dirname, '../saveit-web/dist')))
@@ -248,6 +296,98 @@ app.post('/api/users/login', async (req, res) => {
   await db.run('INSERT INTO sessions (token, userId) VALUES ($1, $2)', [token, user.id])
   
   res.json({ token, userId: user.id })
+})
+
+// Send OTP
+app.post('/api/auth/send-otp', async (req, res) => {
+  const { email } = req.body || {}
+  if (!email) return res.status(400).json({ error: 'Email required' })
+  
+  const user = await db.get('SELECT * FROM users WHERE LOWER(email) = $1', [email.toLowerCase()])
+  if (user) return res.status(400).json({ error: 'User already exists' })
+  
+  const otp = generateOTP()
+  const expiresAt = Date.now() + 10 * 60 * 1000 // 10 minutes
+  
+  otpStore.set(email.toLowerCase(), { otp, expiresAt })
+  
+  const sent = await sendOTPEmail(email, otp)
+  
+  res.json({ 
+    success: true, 
+    message: sent ? 'OTP sent to your email' : 'OTP generated (email not configured)',
+    email: email // Return email for frontend state
+  })
+})
+
+// Verify OTP and register
+app.post('/api/auth/verify-otp', async (req, res) => {
+  const { email, otp, password, name } = req.body || {}
+  if (!email || !otp || !password) return res.status(400).json({ error: 'Email, OTP and password required' })
+  
+  const stored = otpStore.get(email.toLowerCase())
+  if (!stored) return res.status(400).json({ error: 'No OTP requested for this email' })
+  if (Date.now() > stored.expiresAt) {
+    otpStore.delete(email.toLowerCase())
+    return res.status(400).json({ error: 'OTP expired' })
+  }
+  if (stored.otp !== otp) return res.status(400).json({ error: 'Invalid OTP' })
+  
+  otpStore.delete(email.toLowerCase())
+  
+  const user = {
+    id: uuidv4(),
+    email,
+    passwordhash: hashPassword(password),
+    name: name || '',
+    preferredCurrency: 'USD',
+    locale: 'en-US',
+    createdat: new Date().toISOString()
+  }
+  
+  await db.run(`
+    INSERT INTO users (id, email, passwordhash, name, preferredcurrency, locale, createdat)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+  `, [user.id, user.email, user.passwordhash, user.name, user.preferredCurrency, user.locale, user.createdat])
+  
+  const token = 'token-' + uuidv4()
+  await db.run('INSERT INTO sessions (token, userId) VALUES ($1, $2)', [token, user.id])
+  
+  res.json({ token, userId: user.id })
+})
+
+// Google OAuth
+app.post('/api/auth/google', async (req, res) => {
+  const { idToken } = req.body || {}
+  if (!idToken) return res.status(400).json({ error: 'ID token required' })
+  
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID
+    })
+    const payload = ticket.getPayload()
+    
+    let user = await db.get('SELECT * FROM users WHERE email = $1', [payload.email])
+    
+    if (!user) {
+      const userId = uuidv4()
+      await db.run(`
+        INSERT INTO users (id, email, name, passwordhash, preferredcurrency, locale, createdat)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `, [userId, payload.email, payload.name || '', '', 'USD', 'en-US', new Date().toISOString()])
+      
+      user = await db.get('SELECT * FROM users WHERE id = $1', [userId])
+    }
+    
+    const token = 'token-' + uuidv4()
+    await db.run('INSERT INTO sessions (token, userId) VALUES ($1, $2)', [token, user.id])
+    
+    res.json({ token, userId: user.id })
+  } catch (err) {
+    console.error('Google auth error:', err)
+    res.status(401).json({ error: 'Google authentication failed' })
+  }
 })
 
 // Accounts

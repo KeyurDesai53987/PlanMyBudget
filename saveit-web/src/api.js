@@ -50,6 +50,32 @@ export async function register(email, password) {
   return resp
 }
 
+export async function sendOTP(email) {
+  const resp = await api('/auth/send-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  })
+  return resp
+}
+
+export async function verifyOTP(email, otp, password, name) {
+  const resp = await api('/auth/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email, otp, password, name })
+  })
+  setToken(resp.token)
+  return resp
+}
+
+export async function googleAuth(credential) {
+  const resp = await api('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ idToken: credential })
+  })
+  setToken(resp.token)
+  return resp
+}
+
 export function logout() {
   clearToken()
 }
