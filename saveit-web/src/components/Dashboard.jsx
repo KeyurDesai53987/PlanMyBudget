@@ -157,10 +157,6 @@ export default function Dashboard() {
                 <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 24, fontWeight: 700, fill: isDark ? '#e5e5e5' : '#1e293b' }}>
                   {incomeVsExpenseData.length > 0 ? `${(incomeVsExpenseData[0].value / incomeVsExpenseData.reduce((a, b) => a + b.value, 0) * 100).toFixed(0)}%` : '0%'}
                 </text>
-                  {incomeVsExpenseData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === 0 ? colors.success : colors.danger} />
-                  ))}
-                </Pie>
                 <Tooltip 
                   formatter={(value) => `$${value.toLocaleString()}`}
                   contentStyle={{ background: isDark ? '#252525' : '#fff', border: 'none', borderRadius: '8px' }}
