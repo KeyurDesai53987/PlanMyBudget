@@ -95,7 +95,7 @@ export default function Navbar({ onLogout }) {
           
           {!isMobile && (
             <Group gap={4} wrap="nowrap" style={{ overflow: 'auto' }}>
-              {navItems.slice(0, -1).map(item => (
+              {navItems.map(item => (
                 <NavItem key={item.to} to={item.to} label={item.label} />
               ))}
             </Group>
@@ -129,7 +129,7 @@ export default function Navbar({ onLogout }) {
         padding="md"
       >
         <Stack gap="xs">
-          {navItems.slice(0, -1).map(item => {
+          {navItems.map(item => {
             const Icon = item.icon
             return (
               <NavItem 
