@@ -143,14 +143,12 @@ export default function Dashboard() {
                   data={incomeVsExpenseData}
                   cx="50%"
                   cy="45%"
-                  innerRadius={45}
-                  outerRadius={70}
+                  innerRadius={50}
+                  outerRadius={75}
                   paddingAngle={5}
                   dataKey="value"
                   stroke="none"
-                  label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                  labelLine={{ stroke: '#999', strokeWidth: 1 }}
-                  labelPosition="outsideEnd"
+                  label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                 >
                   {incomeVsExpenseData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={index === 0 ? colors.success : colors.danger} />
