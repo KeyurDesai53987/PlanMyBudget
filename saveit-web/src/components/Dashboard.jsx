@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Card, Group, Text, Stack, SimpleGrid, Progress, Loader, Center, useMantineColorScheme } from '@mantine/core'
 import { IconArrowUpRight, IconArrowDownRight, IconWallet, IconTarget } from '@tabler/icons-react'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { api } from '../api'
 import { colors } from '../theme'
 
-const COLORS = [colors.primary, colors.success, colors.danger, colors.warning, colors.purple, colors.cyan]
+const CHART_COLORS = [colors.primary, colors.success, colors.danger, colors.warning, colors.purple, colors.cyan, '#14b8a6', '#f59e0b']
 
 function StatCard({ label, value, icon: Icon, color }) {
   return (
@@ -38,16 +38,18 @@ export default function Dashboard() {
   const [accounts, setAccounts] = useState([])
   const [transactions, setTransactions] = useState([])
   const [goals, setGoals] = useState([])
+  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { loadData() }, [])
 
   const loadData = async () => {
     try {
-      const [accs, txns, gls] = await Promise.all([api('/accounts'), api('/transactions'), api('/goals')])
+      const [accs, txns, gls, cats] = await Promise.all([api('/accounts'), api('/transactions'), api('/goals'), api('/categories')])
       setAccounts(accs.accounts || [])
       setTransactions(txns.transactions || [])
       setGoals(gls.goals || [])
+      setCategories(cats.categories || [])
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }
@@ -88,35 +90,64 @@ export default function Dashboard() {
     }
   })
 
+  const categoryMap = categories.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {})
+
   const categoryData = transactions
-    .filter(t => t.amount < 0 && t.description)
+    .filter(t => t.amount < 0 && t.categoryId)
     .reduce((acc, t) => {
-      const desc = t.description || 'Other'
-      const existing = acc.find(d => d.name === desc)
+      const name = categoryMap[t.categoryId] || 'Other'
+      const existing = acc.find(d => d.name === name)
       if (existing) {
         existing.amount += Math.abs(t.amount)
       } else {
-        acc.push({ name: desc, amount: Math.abs(t.amount) })
+        acc.push({ name, amount: Math.abs(t.amount) })
       }
       return acc
     }, [])
     .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5)
+    .slice(0, 6)
 
   const incomeCategoryData = transactions
-    .filter(t => t.amount > 0 && t.description)
+    .filter(t => t.amount > 0 && t.categoryId)
     .reduce((acc, t) => {
-      const desc = t.description || 'Other'
-      const existing = acc.find(d => d.name === desc)
+      const name = categoryMap[t.categoryId] || 'Other'
+      const existing = acc.find(d => d.name === name)
       if (existing) {
         existing.amount += t.amount
       } else {
-        acc.push({ name: desc, amount: t.amount })
+        acc.push({ name, amount: t.amount })
       }
       return acc
     }, [])
     .sort((a, b) => b.amount - a.amount)
-    .slice(0, 5)
+    .slice(0, 6)
+
+  const accountData = accounts
+    .filter(a => a.balance !== 0)
+    .map(a => ({ name: a.name, value: a.balance }))
+    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+    .slice(0, 6)
+
+  const monthlyData = [...Array(6)].map((_, i) => {
+    const date = new Date()
+    date.setMonth(date.getMonth() - (5 - i))
+    const month = date.getMonth()
+    const year = date.getFullYear()
+    const monthTxns = transactions.filter(t => {
+      const txnDate = new Date(t.date)
+      return txnDate.getMonth() === month && txnDate.getFullYear() === year
+    })
+    return {
+      name: date.toLocaleDateString('en-US', { month: 'short' }),
+      income: monthTxns.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0),
+      expenses: monthTxns.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0)
+    }
+  })
+
+  const savingsData = monthlyData.map(d => ({
+    name: d.name,
+    savings: d.income - d.expenses
+  })).filter(d => d.savings !== 0)
 
   if (loading) return (
     <Center h={400}>
@@ -175,7 +206,7 @@ export default function Dashboard() {
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Text fw={600} mb="md">Last 7 Days</Text>
           {dailyData.some(d => d.income > 0 || d.expenses > 0) ? (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={dailyData}>
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke={isDark ? '#a1a1aa' : '#64748b'} />
                 <YAxis tick={{ fontSize: 12 }} stroke={isDark ? '#a1a1aa' : '#64748b'} />
@@ -195,11 +226,11 @@ export default function Dashboard() {
         </Card>
       </SimpleGrid>
 
-      <SimpleGrid cols={{ base: 1, sm: 2 }}>
+      <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Text fw={600} mb="md">Spending by Category</Text>
           {categoryData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={categoryData} layout="vertical">
                 <XAxis type="number" tick={{ fontSize: 12 }} stroke={isDark ? '#a1a1aa' : '#64748b'} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={80} stroke={isDark ? '#a1a1aa' : '#64748b'} />
@@ -220,7 +251,7 @@ export default function Dashboard() {
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Text fw={600} mb="md">Earnings by Category</Text>
           {incomeCategoryData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={incomeCategoryData} layout="vertical">
                 <XAxis type="number" tick={{ fontSize: 12 }} stroke={isDark ? '#a1a1aa' : '#64748b'} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={80} stroke={isDark ? '#a1a1aa' : '#64748b'} />
@@ -235,6 +266,109 @@ export default function Dashboard() {
             </ResponsiveContainer>
           ) : (
             <Text c="dimmed" ta="center" py="xl">No earnings yet</Text>
+          )}
+        </Card>
+      </SimpleGrid>
+
+      <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Text fw={600} mb="md">Balance by Account</Text>
+          {accountData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie
+                  data={accountData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={40}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {accountData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value) => `$${value.toLocaleString()}`}
+                  contentStyle={{ background: isDark ? '#252525' : '#fff', border: 'none', borderRadius: '8px' }}
+                  itemStyle={{ color: isDark ? '#e5e5e5' : '#1e293b' }}
+                />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  formatter={(value) => <span style={{ color: isDark ? '#e5e5e5' : '#1e293b', fontSize: 12 }}>{value}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <Text c="dimmed" ta="center" py="xl">No accounts yet</Text>
+          )}
+        </Card>
+
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Text fw={600} mb="md">Monthly Trend</Text>
+          {monthlyData.some(d => d.income > 0 || d.expenses > 0) ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={monthlyData}>
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke={isDark ? '#a1a1aa' : '#64748b'} />
+                <YAxis tick={{ fontSize: 12 }} stroke={isDark ? '#a1a1aa' : '#64748b'} />
+                <Tooltip 
+                  formatter={(value) => `$${value.toLocaleString()}`}
+                  contentStyle={{ background: isDark ? '#252525' : '#fff', border: 'none', borderRadius: '8px' }}
+                  itemStyle={{ color: isDark ? '#e5e5e5' : '#1e293b' }}
+                />
+                <Line type="monotone" dataKey="income" name="Income" stroke={colors.success} strokeWidth={2} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="expenses" name="Expenses" stroke={colors.danger} strokeWidth={2} dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <Text c="dimmed" ta="center" py="xl">No data yet</Text>
+          )}
+        </Card>
+      </SimpleGrid>
+
+      <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Text fw={600} mb="md">Monthly Savings</Text>
+          {savingsData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={savingsData}>
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke={isDark ? '#a1a1aa' : '#64748b'} />
+                <YAxis tick={{ fontSize: 12 }} stroke={isDark ? '#a1a1aa' : '#64748b'} />
+                <Tooltip 
+                  formatter={(value) => `$${value.toLocaleString()}`}
+                  contentStyle={{ background: isDark ? '#252525' : '#fff', border: 'none', borderRadius: '8px' }}
+                  itemStyle={{ color: isDark ? '#e5e5e5' : '#1e293b' }}
+                />
+                <Bar dataKey="savings" name="Savings" fill={colors.primary} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <Text c="dimmed" ta="center" py="xl">No savings data yet</Text>
+          )}
+        </Card>
+
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Text fw={600} mb="md">Top Expenses</Text>
+          {categoryData.length > 0 ? (
+            <Stack gap="xs">
+              {categoryData.slice(0, 5).map((cat, i) => {
+                const percent = categoryData.reduce((s, c) => s + c.amount, 0)
+                return (
+                  <div key={i}>
+                    <Group justify="space-between" mb={4}>
+                      <Text size="sm">{cat.name}</Text>
+                      <Text size="sm" fw={500}>${cat.amount.toLocaleString()}</Text>
+                    </Group>
+                    <Progress value={(cat.amount / percent) * 100} color={colors.danger} size="sm" radius="xl" />
+                  </div>
+                )
+              })}
+            </Stack>
+          ) : (
+            <Text c="dimmed" ta="center" py="xl">No expenses yet</Text>
           )}
         </Card>
       </SimpleGrid>
