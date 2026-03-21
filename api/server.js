@@ -252,8 +252,17 @@ app.post('/api/users/login', async (req, res) => {
 
 // Accounts
 app.get('/api/accounts', auth, async (req, res) => {
-  const accounts = await db.all('SELECT id, userid as "userId", name, type, currency, balance, createdat as "createdAt" FROM accounts WHERE userid = $1', [req.userid])
-  res.json({ accounts })
+  const accounts = await db.all('SELECT * FROM accounts WHERE userid = $1', [req.userid])
+  const formatted = accounts.map(a => ({
+    id: a.id,
+    userId: a.userid,
+    name: a.name,
+    type: a.type,
+    currency: a.currency,
+    balance: a.balance,
+    createdAt: a.createdat
+  }))
+  res.json({ accounts: formatted })
 })
 
 app.post('/api/accounts', auth, async (req, res) => {
@@ -438,8 +447,19 @@ app.get('/api/transactions', auth, async (req, res) => {
   }
   
   const placeholders = accountids.map((_, i) => `$${i + 1}`).join(',')
-  const rows = await db.all(`SELECT t.id, t.accountid as "accountId", t.categoryid as "categoryId", t.date, t.amount, t.type, t.description, t.createdat, a.currency as "accountCurrency" FROM transactions t JOIN accounts a ON t.accountid = a.id WHERE t.accountid IN (${placeholders}) ORDER BY t.date DESC`, accountids)
-  res.json({ transactions: rows })
+  const rows = await db.all(`SELECT t.*, a.currency as accountCurrency FROM transactions t JOIN accounts a ON t.accountid = a.id WHERE t.accountid IN (${placeholders}) ORDER BY t.date DESC`, accountids)
+  const formatted = rows.map(t => ({
+    id: t.id,
+    accountId: t.accountid,
+    categoryId: t.categoryid,
+    date: t.date,
+    amount: t.amount,
+    type: t.type,
+    description: t.description,
+    accountCurrency: t.accountCurrency,
+    createdAt: t.createdat
+  }))
+  res.json({ transactions: formatted })
 })
 
 app.post('/api/transactions', auth, async (req, res) => {
@@ -589,8 +609,18 @@ app.delete('/api/budgets/:id', auth, async (req, res) => {
 
 // Goals
 app.get('/api/goals', auth, async (req, res) => {
-  const goals = await db.all('SELECT id, userid as "userId", name, targetamount as "targetAmount", currentamount as "currentAmount", duedate as "dueDate", status, createdat as "createdAt" FROM goals WHERE userid = $1', [req.userid])
-  res.json({ goals })
+  const goals = await db.all('SELECT * FROM goals WHERE userid = $1', [req.userid])
+  const formatted = goals.map(g => ({
+    id: g.id,
+    userId: g.userid,
+    name: g.name,
+    targetAmount: g.targetamount,
+    currentAmount: g.currentamount,
+    dueDate: g.duedate,
+    status: g.status,
+    createdAt: g.createdat
+  }))
+  res.json({ goals: formatted })
 })
 
 app.post('/api/goals', auth, async (req, res) => {
@@ -629,8 +659,18 @@ app.put('/api/goals/:id', auth, async (req, res) => {
   if (dueDate !== undefined || duedate !== undefined) await db.run('UPDATE goals SET duedate = $1 WHERE id = $2', [dueDate || duedate, id])
   if (status) await db.run('UPDATE goals SET status = $1 WHERE id = $2', [status, id])
   
-  const updated = await db.get('SELECT id, userid as "userId", name, targetamount as "targetAmount", currentamount as "currentAmount", duedate as "dueDate", status, createdat as "createdAt" FROM goals WHERE id = $1', [id])
-  res.json({ goal: updated })
+  const updated = await db.get('SELECT * FROM goals WHERE id = $1', [id])
+  const formatted = {
+    id: updated.id,
+    userId: updated.userid,
+    name: updated.name,
+    targetAmount: updated.targetamount,
+    currentAmount: updated.currentamount,
+    dueDate: updated.duedate,
+    status: updated.status,
+    createdAt: updated.createdat
+  }
+  res.json({ goal: formatted })
 })
 
 app.delete('/api/goals/:id', auth, async (req, res) => {
