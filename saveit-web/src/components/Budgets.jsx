@@ -39,8 +39,9 @@ export default function Budgets() {
     return transactions
       .filter(t => {
         const txnDate = new Date(t.date)
-        const matchesById = t.categoryId === categoryId
-        const matchesByName = categoryName && t.categoryId && categoryMap[t.categoryId] === categoryName
+        const txnCategoryId = t.categoryId || t.categoryid
+        const matchesById = txnCategoryId === categoryId
+        const matchesByName = categoryName && txnCategoryId && categoryMap[txnCategoryId] === categoryName
         return t.amount < 0 && 
                (matchesById || matchesByName) &&
                txnDate.getMonth() + 1 === month &&
@@ -61,8 +62,9 @@ export default function Budgets() {
     return transactions
       .filter(t => {
         const txnDate = new Date(t.date)
-        const matchesById = t.categoryId === categoryId
-        const matchesByName = categoryName && t.categoryId && categoryMap[t.categoryId] === categoryName
+        const txnCategoryId = t.categoryId || t.categoryid
+        const matchesById = txnCategoryId === categoryId
+        const matchesByName = categoryName && txnCategoryId && categoryMap[txnCategoryId] === categoryName
         return t.amount < 0 && 
                (matchesById || matchesByName) &&
                txnDate.getMonth() + 1 === month &&

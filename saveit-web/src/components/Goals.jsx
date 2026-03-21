@@ -46,7 +46,8 @@ export default function Goals() {
     const goal = goals.find(g => g.id === goalId)
     if (!goal) return
     try {
-      await api(`/goals/${goalId}`, { method: 'PUT', body: JSON.stringify({ currentAmount: goal.currentAmount + amount }) })
+      const currentAmt = goal.currentAmount || goal.currentamount || 0
+      await api(`/goals/${goalId}`, { method: 'PUT', body: JSON.stringify({ currentamount: currentAmt + amount }) })
       loadGoals()
     } catch (err) { alert(err.message) }
   }
