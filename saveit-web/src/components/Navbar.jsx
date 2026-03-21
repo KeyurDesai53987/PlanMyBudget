@@ -14,7 +14,6 @@ const navItems = [
   { to: '/goals', label: 'Goals', icon: IconTarget },
   { to: '/recurring', label: 'Recurring', icon: IconRepeat },
   { to: '/categories', label: 'Categories', icon: IconTag },
-  { to: '/settings', label: 'Settings', icon: IconSettings },
 ]
 
 function NavItem({ to, label, icon: Icon, onClick }) {
@@ -149,7 +148,7 @@ export default function Navbar({ onLogout }) {
                     <Text size="xs" c="dimmed">{user.email}</Text>
                   </Box>
                   <Divider />
-                  <Menu.Item leftSection={<IconUser size={16} />} onClick={() => { navigate('/settings'); }}>
+                  <Menu.Item leftSection={<IconSettings size={16} />} onClick={() => { navigate('/settings'); }}>
                     Settings
                   </Menu.Item>
                   <Menu.Item leftSection={<IconLogout size={16} />} color="red" onClick={handleLogout}>
