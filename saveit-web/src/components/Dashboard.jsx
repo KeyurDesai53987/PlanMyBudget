@@ -148,6 +148,9 @@ export default function Dashboard() {
                   paddingAngle={5}
                   dataKey="value"
                   stroke="none"
+                  label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                  labelLine={{ stroke: '#999', strokeWidth: 1 }}
+                  labelPosition="outsideEnd"
                 >
                   {incomeVsExpenseData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={index === 0 ? colors.success : colors.danger} />
