@@ -160,9 +160,6 @@ export default function Dashboard() {
                   contentStyle={{ background: isDark ? '#252525' : '#fff', border: 'none', borderRadius: '8px' }}
                   itemStyle={{ color: isDark ? '#e5e5e5' : '#1e293b' }}
                 />
-                <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 20, fontWeight: 700, fill: isDark ? '#e5e5e5' : '#1e293b' }}>
-                  {incomeVsExpenseTotal > 0 ? `${(incomeVsExpenseData[0].value / incomeVsExpenseTotal * 100).toFixed(0)}%` : '0%'}
-                </text>
                 <Legend 
                   verticalAlign="bottom" 
                   height={36}
