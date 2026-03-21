@@ -137,19 +137,17 @@ export default function Dashboard() {
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Text fw={600} mb="md">Income vs Expenses</Text>
           {incomeVsExpenseData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
                   data={incomeVsExpenseData}
                   cx="50%"
-                  cy="50%"
+                  cy="45%"
                   innerRadius={45}
-                  outerRadius={75}
+                  outerRadius={70}
                   paddingAngle={5}
                   dataKey="value"
                   stroke="none"
-                  label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                  labelLine={false}
                 >
                   {incomeVsExpenseData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={index === 0 ? colors.success : colors.danger} />
