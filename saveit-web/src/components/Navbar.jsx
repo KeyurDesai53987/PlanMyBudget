@@ -1,7 +1,10 @@
-import { Group, Button, Text, Box, ActionIcon, Drawer, Stack, useMantineColorScheme, Burger } from '@mantine/core'
+import { useState, useEffect } from 'react'
+import { Group, Button, Text, Box, ActionIcon, Drawer, Stack, useMantineColorScheme, Burger, Avatar, Menu, Divider } from '@mantine/core'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
-import { IconWallet, IconLogout, IconMoon, IconSun, IconHome, IconBuildingBank, IconCreditCard, IconChartBar, IconTarget, IconRepeat, IconTag, IconSettings } from '@tabler/icons-react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { IconWallet, IconLogout, IconMoon, IconSun, IconHome, IconBuildingBank, IconCreditCard, IconChartBar, IconTarget, IconRepeat, IconTag, IconSettings, IconUser, IconChevronDown } from '@tabler/icons-react'
+import { NavLink } from 'react-router-dom'
+import { api } from '../api'
+import { colors } from '../theme'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: IconHome },
@@ -62,8 +65,24 @@ function ColorSchemeToggle({ onClick }) {
 export default function Navbar({ onLogout }) {
   const { colorScheme } = useMantineColorScheme()
   const isDark = colorScheme === 'dark'
-  const [opened, { open, close, toggle }] = useDisclosure(false)
+  const [opened, { close, toggle }] = useDisclosure(false)
   const isMobile = useMediaQuery('(max-width: 768px)')
+  const [user, setUser] = useState({ name: '', email: '' })
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const res = await api('/profile')
+        setUser({
+          name: res.preferences?.name || 'User',
+          email: res.preferences?.email || ''
+        })
+      } catch (err) {
+        console.error(err)
+      }
+    }
+    loadUser()
+  }, [])
 
   const handleNavClick = () => {
     if (isMobile) close()
@@ -72,6 +91,11 @@ export default function Navbar({ onLogout }) {
   const handleLogout = () => {
     onLogout()
     if (isMobile) close()
+  }
+
+  const getInitials = (name) => {
+    if (!name) return '?'
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }
 
   return (
@@ -104,18 +128,34 @@ export default function Navbar({ onLogout }) {
           {isMobile ? (
             <Burger opened={opened} onClick={toggle} size="sm" />
           ) : (
-            <Group gap="xs">
+            <Group gap="md">
               <ColorSchemeToggle />
-              <Button 
-                variant="subtle" 
-                color="gray" 
-                size="sm" 
-                leftSection={<IconLogout size={16} />}
-                onClick={onLogout}
-                style={{ flexShrink: 0 }}
-              >
-                Logout
-              </Button>
+              <Menu shadow="md" width={200}>
+                <Menu.Target>
+                  <Button variant="subtle" color="gray" size="sm" px="xs">
+                    <Group gap="xs">
+                      <Avatar size={28} radius="xl" color="gray" style={{ background: colors.primary + '20' }}>
+                        <Text size="xs" fw={600} style={{ color: colors.primary }}>{getInitials(user.name)}</Text>
+                      </Avatar>
+                      <Text size="sm" fw={500}>{user.name}</Text>
+                      <IconChevronDown size={14} />
+                    </Group>
+                  </Button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Box px="sm" py="xs">
+                    <Text size="sm" fw={500}>{user.name}</Text>
+                    <Text size="xs" c="dimmed">{user.email}</Text>
+                  </Box>
+                  <Divider />
+                  <Menu.Item leftSection={<IconUser size={16} />} component="a" href="/settings">
+                    Settings
+                  </Menu.Item>
+                  <Menu.Item leftSection={<IconLogout size={16} />} color="red" onClick={handleLogout}>
+                    Logout
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
             </Group>
           )}
         </Group>
@@ -143,6 +183,15 @@ export default function Navbar({ onLogout }) {
           })}
           
           <Box style={{ borderTop: `1px solid ${isDark ? '#2e2e2e' : '#e2e8f0'}`, marginTop: '8px', paddingTop: '8px' }}>
+            <Group gap="xs" mb="xs">
+              <Avatar size={32} radius="xl" color="gray" style={{ background: colors.primary + '20' }}>
+                <Text size="sm" fw={600} style={{ color: colors.primary }}>{getInitials(user.name)}</Text>
+              </Avatar>
+              <div>
+                <Text size="sm" fw={500}>{user.name}</Text>
+                <Text size="xs" c="dimmed">{user.email}</Text>
+              </div>
+            </Group>
             <ColorSchemeToggle onClick={close} />
             <Button 
               variant="subtle" 
