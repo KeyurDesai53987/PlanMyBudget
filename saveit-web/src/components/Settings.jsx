@@ -1,32 +1,68 @@
 import { useState, useEffect } from 'react'
-import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Loader, Center, Collapse, Divider } from '@mantine/core'
-import { IconUser, IconLock, IconCheck, IconChevronDown, IconChevronUp, IconInfoCircle } from '@tabler/icons-react'
+import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Loader, Center, Avatar, Badge, Divider, Switch, Select, useMantineColorScheme, SimpleGrid } from '@mantine/core'
+import { IconUser, IconLock, IconCheck, IconInfoCircle, IconPalette, IconCalendar, IconCurrencyDollar, IconLogout, IconTrendingUp, IconTarget, IconReceipt } from '@tabler/icons-react'
 import { api } from '../api'
+import { colors } from '../theme'
+
+function StatItem({ icon: Icon, label, value, color }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '12px' }}>
+      <div style={{
+        width: 40,
+        height: 40,
+        borderRadius: 8,
+        background: `${color}15`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: '0 auto 8px'
+      }}>
+        <Icon size={20} style={{ color }} />
+      </div>
+      <Text size="lg" fw={700}>{value}</Text>
+      <Text size="xs" c="dimmed">{label}</Text>
+    </div>
+  )
+}
 
 export default function Settings() {
+  const { colorScheme, setColorScheme } = useMantineColorScheme()
+  const isDark = colorScheme === 'dark'
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [profile, setProfile] = useState({ email: '', name: '', createdAt: '' })
+  const [stats, setStats] = useState({ transactions: 0, accounts: 0, goals: 0, budgets: 0 })
   const [passwordData, setPasswordData] = useState({ current: '', new: '', confirm: '' })
   const [message, setMessage] = useState({ type: '', text: '' })
-  const [expanded, setExpanded] = useState({ profile: true, password: false, account: false, about: false })
+  const [currency, setCurrency] = useState('USD')
 
-  useEffect(() => { loadProfile() }, [])
+  useEffect(() => { loadData() }, [])
 
-  const loadProfile = async () => {
+  const loadData = async () => {
     try {
-      const res = await api('/profile')
+      const [profileRes, accountsRes, transactionsRes, goalsRes, budgetsRes] = await Promise.all([
+        api('/profile'),
+        api('/accounts'),
+        api('/transactions'),
+        api('/goals'),
+        api('/budgets')
+      ])
       setProfile({
-        email: res.preferences?.email || '',
-        name: res.preferences?.name || '',
-        createdAt: res.preferences?.createdAt || ''
+        email: profileRes.preferences?.email || '',
+        name: profileRes.preferences?.name || '',
+        createdAt: profileRes.preferences?.createdAt || ''
       })
+      setStats({
+        transactions: transactionsRes.transactions?.length || 0,
+        accounts: accountsRes.accounts?.length || 0,
+        goals: goalsRes.goals?.length || 0,
+        budgets: budgetsRes.budgets?.length || 0
+      })
+      if (profileRes.preferences?.currency) {
+        setCurrency(profileRes.preferences.currency)
+      }
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
-  }
-
-  const toggleSection = (section) => {
-    setExpanded(prev => ({ ...prev, [section]: !prev[section] }))
   }
 
   const handleProfileUpdate = async (e) => {
@@ -34,7 +70,7 @@ export default function Settings() {
     setSaving(true)
     setMessage({ type: '', text: '' })
     try {
-      await api('/profile', { method: 'PUT', body: JSON.stringify({ name: profile.name }) })
+      await api('/profile', { method: 'PUT', body: JSON.stringify({ name: profile.name, currency }) })
       setMessage({ type: 'success', text: 'Profile saved!' })
     } catch (err) { 
       setMessage({ type: 'error', text: err.message || 'Failed to save' })
@@ -64,10 +100,15 @@ export default function Settings() {
     finally { setSaving(false) }
   }
 
-  if (loading) return <Center h={300}><Loader color="gray" /></Center>
+  const getInitials = (name) => {
+    if (!name) return '?'
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }
+
+  if (loading) return <Center h={400}><Loader color="gray" /></Center>
 
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto' }}>
+    <div style={{ maxWidth: 700, margin: '0 auto' }}>
       <Text size="xl" fw={700} mb="lg">Settings</Text>
 
       {message.text && (
@@ -76,133 +117,152 @@ export default function Settings() {
         </Card>
       )}
 
-      <Stack gap="sm">
-        <Card shadow="sm" padding={0} radius="md" withBorder>
-          <Group 
-            gap="sm" 
-            p="md" 
-            style={{ cursor: 'pointer', borderBottom: expanded.profile ? '1px solid var(--mantine-color-default-border)' : 'none' }}
-            onClick={() => toggleSection('profile')}
-          >
-            <IconUser size={18} />
-            <Text fw={600} style={{ flex: 1 }}>Profile</Text>
-            {expanded.profile ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
+      <Stack gap="md">
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Group gap="lg">
+            <Avatar size={80} radius="xl" color="gray" style={{ background: colors.primary + '20' }}>
+              <Text size="xl" fw={700} style={{ color: colors.primary }}>{getInitials(profile.name)}</Text>
+            </Avatar>
+            <div style={{ flex: 1 }}>
+              <Text size="xl" fw={700}>{profile.name || 'User'}</Text>
+              <Text size="sm" c="dimmed">{profile.email}</Text>
+              <Group gap="xs" mt="xs">
+                <Badge size="sm" variant="light" color="gray" leftSection={<IconCalendar size={12} />}>
+                  Joined {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                </Badge>
+              </Group>
+            </div>
           </Group>
-          <Collapse in={expanded.profile}>
-            <form onSubmit={handleProfileUpdate}>
-              <Stack gap="sm" p="md">
-                <TextInput
-                  label="Name"
-                  value={profile.name}
-                  onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                />
-                <TextInput
-                  label="Email"
-                  value={profile.email}
-                  disabled
-                />
-                <Button type="submit" color="gray" size="sm" loading={saving} style={{ alignSelf: 'flex-start' }}>
-                  Save
-                </Button>
-              </Stack>
-            </form>
-          </Collapse>
+          
+          <Divider my="md" />
+          
+          <SimpleGrid cols={{ base: 2, sm: 4 }}>
+            <StatItem icon={IconReceipt} label="Transactions" value={stats.transactions} color={colors.primary} />
+            <StatItem icon={IconCurrencyDollar} label="Accounts" value={stats.accounts} color={colors.success} />
+            <StatItem icon={IconTarget} label="Goals" value={stats.goals} color={colors.warning} />
+            <StatItem icon={IconTrendingUp} label="Budgets" value={stats.budgets} color={colors.danger} />
+          </SimpleGrid>
         </Card>
 
-        <Card shadow="sm" padding={0} radius="md" withBorder>
-          <Group 
-            gap="sm" 
-            p="md" 
-            style={{ cursor: 'pointer', borderBottom: expanded.password ? '1px solid var(--mantine-color-default-border)' : 'none' }}
-            onClick={() => toggleSection('password')}
-          >
-            <IconLock size={18} />
-            <Text fw={600} style={{ flex: 1 }}>Password</Text>
-            {expanded.password ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Group gap="sm" mb="md">
+            <IconUser size={20} />
+            <Text fw={600}>Profile</Text>
           </Group>
-          <Collapse in={expanded.password}>
-            <form onSubmit={handlePasswordChange}>
-              <Stack gap="sm" p="md">
-                <PasswordInput
-                  label="Current"
-                  placeholder="Current password"
-                  value={passwordData.current}
-                  onChange={(e) => setPasswordData({ ...passwordData, current: e.target.value })}
-                />
-                <PasswordInput
-                  label="New"
-                  placeholder="New password"
-                  value={passwordData.new}
-                  onChange={(e) => setPasswordData({ ...passwordData, new: e.target.value })}
-                />
-                <PasswordInput
-                  label="Confirm"
-                  placeholder="Confirm password"
-                  value={passwordData.confirm}
-                  onChange={(e) => setPasswordData({ ...passwordData, confirm: e.target.value })}
-                />
-                <Button 
-                  type="submit" 
-                  color="gray" 
-                  size="sm" 
-                  loading={saving}
-                  disabled={!passwordData.current || !passwordData.new || !passwordData.confirm}
-                  style={{ alignSelf: 'flex-start' }}
-                >
-                  Update Password
-                </Button>
-              </Stack>
-            </form>
-          </Collapse>
-        </Card>
-
-        <Card shadow="sm" padding={0} radius="md" withBorder>
-          <Group 
-            gap="sm" 
-            p="md" 
-            style={{ cursor: 'pointer', borderBottom: expanded.account ? '1px solid var(--mantine-color-default-border)' : 'none' }}
-            onClick={() => toggleSection('account')}
-          >
-            <IconCheck size={18} />
-            <Text fw={600} style={{ flex: 1 }}>Account</Text>
-            {expanded.account ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
-          </Group>
-          <Collapse in={expanded.account}>
-            <Stack gap="xs" p="md">
-              <Text size="sm"><strong>Email:</strong> {profile.email}</Text>
-              <Text size="sm"><strong>Member since:</strong> {new Date(profile.createdAt).toLocaleDateString()}</Text>
+          <form onSubmit={handleProfileUpdate}>
+            <Stack gap="sm">
+              <TextInput
+                label="Display Name"
+                placeholder="Your name"
+                value={profile.name}
+                onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+              />
+              <TextInput
+                label="Email"
+                value={profile.email}
+                disabled
+              />
+              <Select
+                label="Currency"
+                value={currency}
+                onChange={setCurrency}
+                data={[
+                  { value: 'USD', label: 'USD - US Dollar' },
+                  { value: 'EUR', label: 'EUR - Euro' },
+                  { value: 'GBP', label: 'GBP - British Pound' },
+                  { value: 'INR', label: 'INR - Indian Rupee' },
+                  { value: 'CAD', label: 'CAD - Canadian Dollar' },
+                  { value: 'AUD', label: 'AUD - Australian Dollar' },
+                  { value: 'JPY', label: 'JPY - Japanese Yen' },
+                ]}
+              />
+              <Button type="submit" color="gray" loading={saving} style={{ alignSelf: 'flex-start' }}>
+                Save Changes
+              </Button>
             </Stack>
-          </Collapse>
+          </form>
         </Card>
 
-        <Card shadow="sm" padding={0} radius="md" withBorder>
-          <Group 
-            gap="sm" 
-            p="md" 
-            style={{ cursor: 'pointer', borderBottom: expanded.about ? '1px solid var(--mantine-color-default-border)' : 'none' }}
-            onClick={() => toggleSection('about')}
-          >
-            <IconInfoCircle size={18} />
-            <Text fw={600} style={{ flex: 1 }}>About</Text>
-            {expanded.about ? <IconChevronUp size={18} /> : <IconChevronDown size={18} />}
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Group gap="sm" mb="md">
+            <IconLock size={20} />
+            <Text fw={600}>Change Password</Text>
           </Group>
-          <Collapse in={expanded.about}>
-            <Stack gap="sm" p="md">
-              <Text size="lg" fw={700}>PlanMyBudget</Text>
-              <Text size="sm" c="dimmed">Personal Finance Tracker</Text>
-              <Text size="xs" c="dimmed">Version 1.0.0</Text>
-              <Divider my="sm" />
-              <Text size="sm">
-                PlanMyBudget is a simple and intuitive personal finance management app that helps you track your income, expenses, budgets, and financial goals.
-              </Text>
-              <Text size="sm">
-                Built with React, Mantine UI, and SQLite.
-              </Text>
-              <Divider my="sm" />
-              <Text size="sm"><strong>Developer:</strong> Keyur Desai</Text>
-              <Text size="sm"><strong>Email:</strong> keyurdesai@icloud.com</Text>
+          <form onSubmit={handlePasswordChange}>
+            <Stack gap="sm">
+              <PasswordInput
+                label="Current Password"
+                placeholder="Enter current password"
+                value={passwordData.current}
+                onChange={(e) => setPasswordData({ ...passwordData, current: e.target.value })}
+              />
+              <PasswordInput
+                label="New Password"
+                placeholder="Enter new password"
+                value={passwordData.new}
+                onChange={(e) => setPasswordData({ ...passwordData, new: e.target.value })}
+              />
+              <PasswordInput
+                label="Confirm New Password"
+                placeholder="Confirm new password"
+                value={passwordData.confirm}
+                onChange={(e) => setPasswordData({ ...passwordData, confirm: e.target.value })}
+              />
+              <Button 
+                type="submit" 
+                color="gray" 
+                loading={saving}
+                disabled={!passwordData.current || !passwordData.new || !passwordData.confirm}
+                style={{ alignSelf: 'flex-start' }}
+              >
+                Update Password
+              </Button>
             </Stack>
-          </Collapse>
+          </form>
+        </Card>
+
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Group gap="sm" mb="md">
+            <IconPalette size={20} />
+            <Text fw={600}>Appearance</Text>
+          </Group>
+          <Stack gap="sm">
+            <Group justify="space-between">
+              <div>
+                <Text size="sm">Dark Mode</Text>
+                <Text size="xs" c="dimmed">Switch between light and dark themes</Text>
+              </div>
+              <Switch
+                checked={isDark}
+                onChange={(event) => setColorScheme(event.currentTarget.checked ? 'dark' : 'light')}
+              />
+            </Group>
+          </Stack>
+        </Card>
+
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Group gap="sm" mb="md">
+            <IconInfoCircle size={20} />
+            <Text fw={600}>About</Text>
+          </Group>
+          <Stack gap="xs">
+            <Text size="lg" fw={700}>PlanMyBudget</Text>
+            <Text size="sm" c="dimmed">Personal Finance Tracker</Text>
+            <Badge size="sm" variant="light" color="gray">Version 1.0.0</Badge>
+            <Divider my="sm" />
+            <Text size="sm">
+              PlanMyBudget helps you track income, expenses, budgets, and financial goals with an intuitive interface.
+            </Text>
+            <Divider my="sm" />
+            <Group gap="xs">
+              <Text size="sm"><strong>Developer:</strong></Text>
+              <Text size="sm" c="dimmed">Keyur Desai</Text>
+            </Group>
+            <Group gap="xs">
+              <Text size="sm"><strong>Contact:</strong></Text>
+              <Text size="sm" c="dimmed">keyurdesai@icloud.com</Text>
+            </Group>
+          </Stack>
         </Card>
       </Stack>
     </div>
