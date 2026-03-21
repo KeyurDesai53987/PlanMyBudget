@@ -252,7 +252,7 @@ app.post('/api/users/login', async (req, res) => {
 
 // Accounts
 app.get('/api/accounts', auth, async (req, res) => {
-  const accounts = await db.all('SELECT * FROM accounts WHERE userid = $1', [req.userid])
+  const accounts = await db.all('SELECT id, userid as "userId", name, type, currency, balance, createdat as "createdAt" FROM accounts WHERE userid = $1', [req.userid])
   res.json({ accounts })
 })
 
@@ -438,8 +438,8 @@ app.get('/api/transactions', auth, async (req, res) => {
   }
   
   const placeholders = accountids.map((_, i) => `$${i + 1}`).join(',')
-  const transactions = await db.all(`SELECT t.*, a.currency as accountCurrency FROM transactions t JOIN accounts a ON t.accountid = a.id WHERE t.accountid IN (${placeholders}) ORDER BY t.date DESC`, accountids)
-  res.json({ transactions })
+  const rows = await db.all(`SELECT t.id, t.accountid as "accountId", t.categoryid as "categoryId", t.date, t.amount, t.type, t.description, t.createdat, a.currency as "accountCurrency" FROM transactions t JOIN accounts a ON t.accountid = a.id WHERE t.accountid IN (${placeholders}) ORDER BY t.date DESC`, accountids)
+  res.json({ transactions: rows })
 })
 
 app.post('/api/transactions', auth, async (req, res) => {
@@ -589,7 +589,7 @@ app.delete('/api/budgets/:id', auth, async (req, res) => {
 
 // Goals
 app.get('/api/goals', auth, async (req, res) => {
-  const goals = await db.all('SELECT * FROM goals WHERE userid = $1', [req.userid])
+  const goals = await db.all('SELECT id, userid as "userId", name, targetamount as "targetAmount", currentamount as "currentAmount", duedate as "dueDate", status, createdat as "createdAt" FROM goals WHERE userid = $1', [req.userid])
   res.json({ goals })
 })
 
@@ -603,16 +603,16 @@ app.post('/api/goals', auth, async (req, res) => {
     id: uuidv4(),
     userid: req.userid,
     name,
-    targetamount: tgtAmount,
-    currentamount: 0,
-    duedate: due || null,
+    targetAmount: tgtAmount,
+    currentAmount: 0,
+    dueDate: due || null,
     status: 'active'
   }
   
   await db.run(`
     INSERT INTO goals (id, userid, name, targetamount, currentamount, duedate, status)
     VALUES ($1, $2, $3, $4, $5, $6, $7)
-  `, [goal.id, goal.userid, goal.name, goal.targetamount, goal.currentamount, goal.duedate, goal.status])
+  `, [goal.id, goal.userid, goal.name, goal.targetAmount, goal.currentAmount, goal.dueDate, goal.status])
   
   res.json({ goal })
 })
@@ -622,14 +622,14 @@ app.put('/api/goals/:id', auth, async (req, res) => {
   const goal = await db.get('SELECT * FROM goals WHERE id = $1 AND userid = $2', [id, req.userid])
   if (!goal) return res.status(404).json({ error: 'Goal not found' })
   
-  const { name, targetamount, currentamount, duedate, status } = req.body || {}
+  const { name, targetAmount, targetamount, currentAmount, currentamount, dueDate, duedate, status } = req.body || {}
   if (name) await db.run('UPDATE goals SET name = $1 WHERE id = $2', [name, id])
-  if (typeof targetamount === 'number') await db.run('UPDATE goals SET targetamount = $1 WHERE id = $2', [targetamount, id])
-  if (typeof currentamount === 'number') await db.run('UPDATE goals SET currentamount = $1 WHERE id = $2', [currentamount, id])
-  if (duedate !== undefined) await db.run('UPDATE goals SET duedate = $1 WHERE id = $2', [duedate, id])
+  if (typeof (targetAmount || targetamount) === 'number') await db.run('UPDATE goals SET targetamount = $1 WHERE id = $2', [targetAmount || targetamount, id])
+  if (typeof (currentAmount || currentamount) === 'number') await db.run('UPDATE goals SET currentamount = $1 WHERE id = $2', [currentAmount || currentamount, id])
+  if (dueDate !== undefined || duedate !== undefined) await db.run('UPDATE goals SET duedate = $1 WHERE id = $2', [dueDate || duedate, id])
   if (status) await db.run('UPDATE goals SET status = $1 WHERE id = $2', [status, id])
   
-  const updated = await db.get('SELECT * FROM goals WHERE id = $1', [id])
+  const updated = await db.get('SELECT id, userid as "userId", name, targetamount as "targetAmount", currentamount as "currentAmount", duedate as "dueDate", status, createdat as "createdAt" FROM goals WHERE id = $1', [id])
   res.json({ goal: updated })
 })
 
