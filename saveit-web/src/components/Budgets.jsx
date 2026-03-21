@@ -39,7 +39,7 @@ export default function Budgets() {
     return transactions
       .filter(t => {
         const txnDate = new Date(t.date)
-        const txnCategoryId = t.categoryId || t.categoryid
+        const txnCategoryId = t.categoryid
         const matchesById = txnCategoryId === categoryId
         const matchesByName = categoryName && txnCategoryId && categoryMap[txnCategoryId] === categoryName
         return t.amount < 0 && 
@@ -62,7 +62,7 @@ export default function Budgets() {
     return transactions
       .filter(t => {
         const txnDate = new Date(t.date)
-        const txnCategoryId = t.categoryId || t.categoryid
+        const txnCategoryId = t.categoryid
         const matchesById = txnCategoryId === categoryId
         const matchesByName = categoryName && txnCategoryId && categoryMap[txnCategoryId] === categoryName
         return t.amount < 0 && 

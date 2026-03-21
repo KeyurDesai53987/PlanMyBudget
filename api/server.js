@@ -756,7 +756,7 @@ app.post('/api/recurring/:id/process', auth, async (req, res) => {
   }
   
   await db.run(`
-    INSERT INTO transactions (id, accountid, categoryId, date, amount, type, description, createdat)
+    INSERT INTO transactions (id, accountid, categoryid, date, amount, type, description, createdat)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
   `, [txn.id, txn.accountid, txn.categoryid, txn.date, txn.amount, txn.type, txn.description, txn.createdat])
   
