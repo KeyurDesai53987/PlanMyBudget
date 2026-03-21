@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Loader, Center, Avatar, Badge, Divider, Switch, Select, useMantineColorScheme, SimpleGrid } from '@mantine/core'
+import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Loader, Center, Avatar, Badge, Divider, Switch, useMantineColorScheme, SimpleGrid } from '@mantine/core'
 import { IconUser, IconLock, IconCheck, IconInfoCircle, IconPalette, IconCalendar, IconCurrencyDollar, IconLogout, IconTrendingUp, IconTarget, IconReceipt } from '@tabler/icons-react'
 import { api } from '../api'
 import { colors } from '../theme'
@@ -34,7 +34,6 @@ export default function Settings() {
   const [stats, setStats] = useState({ transactions: 0, accounts: 0, goals: 0, budgets: 0 })
   const [passwordData, setPasswordData] = useState({ current: '', new: '', confirm: '' })
   const [message, setMessage] = useState({ type: '', text: '' })
-  const [currency, setCurrency] = useState('USD')
 
   useEffect(() => { loadData() }, [])
 
@@ -58,9 +57,6 @@ export default function Settings() {
         goals: goalsRes.goals?.length || 0,
         budgets: budgetsRes.budgets?.length || 0
       })
-      if (profileRes.preferences?.currency) {
-        setCurrency(profileRes.preferences.currency)
-      }
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }
@@ -70,7 +66,7 @@ export default function Settings() {
     setSaving(true)
     setMessage({ type: '', text: '' })
     try {
-      await api('/profile', { method: 'PUT', body: JSON.stringify({ name: profile.name, currency }) })
+      await api('/profile', { method: 'PUT', body: JSON.stringify({ name: profile.name }) })
       setMessage({ type: 'success', text: 'Profile saved!' })
     } catch (err) { 
       setMessage({ type: 'error', text: err.message || 'Failed to save' })
@@ -161,20 +157,6 @@ export default function Settings() {
                 label="Email"
                 value={profile.email}
                 disabled
-              />
-              <Select
-                label="Currency"
-                value={currency}
-                onChange={setCurrency}
-                data={[
-                  { value: 'USD', label: 'USD - US Dollar' },
-                  { value: 'EUR', label: 'EUR - Euro' },
-                  { value: 'GBP', label: 'GBP - British Pound' },
-                  { value: 'INR', label: 'INR - Indian Rupee' },
-                  { value: 'CAD', label: 'CAD - Canadian Dollar' },
-                  { value: 'AUD', label: 'AUD - Australian Dollar' },
-                  { value: 'JPY', label: 'JPY - Japanese Yen' },
-                ]}
               />
               <Button type="submit" color="gray" loading={saving} style={{ alignSelf: 'flex-start' }}>
                 Save Changes
