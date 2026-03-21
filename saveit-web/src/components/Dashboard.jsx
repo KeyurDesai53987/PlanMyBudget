@@ -142,14 +142,21 @@ export default function Dashboard() {
                 <Pie
                   data={incomeVsExpenseData}
                   cx="50%"
-                  cy="45%"
-                  innerRadius={50}
-                  outerRadius={75}
-                  paddingAngle={5}
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={2}
                   dataKey="value"
                   stroke="none"
-                  label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                  label={false}
                 >
+                  {incomeVsExpenseData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index === 0 ? colors.success : colors.danger} />
+                  ))}
+                </Pie>
+                <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 24, fontWeight: 700, fill: isDark ? '#e5e5e5' : '#1e293b' }}>
+                  {incomeVsExpenseData.length > 0 ? `${(incomeVsExpenseData[0].value / incomeVsExpenseData.reduce((a, b) => a + b.value, 0) * 100).toFixed(0)}%` : '0%'}
+                </text>
                   {incomeVsExpenseData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={index === 0 ? colors.success : colors.danger} />
                   ))}
