@@ -68,6 +68,8 @@ export default function Dashboard() {
     { name: 'Income', value: income },
     { name: 'Expenses', value: expenses }
   ].filter(d => d.value > 0)
+  
+  const incomeVsExpenseTotal = income + expenses
 
   const last7Days = [...Array(7)].map((_, i) => {
     const date = new Date()
@@ -143,25 +145,24 @@ export default function Dashboard() {
                   data={incomeVsExpenseData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={2}
+                  innerRadius={45}
+                  outerRadius={75}
+                  paddingAngle={5}
                   dataKey="value"
                   stroke="none"
-                  label={false}
                 >
                   {incomeVsExpenseData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={index === 0 ? colors.success : colors.danger} />
                   ))}
                 </Pie>
-                <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 24, fontWeight: 700, fill: isDark ? '#e5e5e5' : '#1e293b' }}>
-                  {incomeVsExpenseData.length > 0 ? `${(incomeVsExpenseData[0].value / incomeVsExpenseData.reduce((a, b) => a + b.value, 0) * 100).toFixed(0)}%` : '0%'}
-                </text>
                 <Tooltip 
-                  formatter={(value) => `$${value.toLocaleString()}`}
+                  formatter={(value, name) => [`$${value.toLocaleString()} (${incomeVsExpenseTotal > 0 ? ((value / incomeVsExpenseTotal) * 100).toFixed(0) : 0}%)`, name]}
                   contentStyle={{ background: isDark ? '#252525' : '#fff', border: 'none', borderRadius: '8px' }}
                   itemStyle={{ color: isDark ? '#e5e5e5' : '#1e293b' }}
                 />
+                <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" style={{ fontSize: 20, fontWeight: 700, fill: isDark ? '#e5e5e5' : '#1e293b' }}>
+                  {incomeVsExpenseTotal > 0 ? `${(incomeVsExpenseData[0].value / incomeVsExpenseTotal * 100).toFixed(0)}%` : '0%'}
+                </text>
                 <Legend 
                   verticalAlign="bottom" 
                   height={36}
