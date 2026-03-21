@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Card, Group, Text, Stack, SimpleGrid, Progress, Loader, Center, useMantineColorScheme } from '@mantine/core'
+import { Card, Group, Text, Stack, SimpleGrid, Loader, Center, useMantineColorScheme } from '@mantine/core'
 import { IconArrowUpRight, IconArrowDownRight, IconWallet, IconTarget } from '@tabler/icons-react'
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { api } from '../api'
@@ -101,21 +101,6 @@ export default function Dashboard() {
         existing.amount += Math.abs(t.amount)
       } else {
         acc.push({ name, amount: Math.abs(t.amount) })
-      }
-      return acc
-    }, [])
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, 6)
-
-  const incomeCategoryData = transactions
-    .filter(t => t.amount > 0 && t.categoryId)
-    .reduce((acc, t) => {
-      const name = categoryMap[t.categoryId] || 'Other'
-      const existing = acc.find(d => d.name === name)
-      if (existing) {
-        existing.amount += t.amount
-      } else {
-        acc.push({ name, amount: t.amount })
       }
       return acc
     }, [])
@@ -228,50 +213,6 @@ export default function Dashboard() {
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
         <Card shadow="sm" padding="lg" radius="md" withBorder>
-          <Text fw={600} mb="md">Spending by Category</Text>
-          {categoryData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={categoryData} layout="vertical">
-                <XAxis type="number" tick={{ fontSize: 12 }} stroke={isDark ? '#a1a1aa' : '#64748b'} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={80} stroke={isDark ? '#a1a1aa' : '#64748b'} />
-                <Tooltip 
-                  cursor={false}
-                  formatter={(value) => `$${value.toLocaleString()}`}
-                  contentStyle={{ background: isDark ? '#252525' : '#fff', border: 'none', borderRadius: '8px' }}
-                  itemStyle={{ color: isDark ? '#e5e5e5' : '#1e293b' }}
-                />
-                <Bar dataKey="amount" fill={colors.danger} radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <Text c="dimmed" ta="center" py="xl">No expenses yet</Text>
-          )}
-        </Card>
-
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
-          <Text fw={600} mb="md">Earnings by Category</Text>
-          {incomeCategoryData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={incomeCategoryData} layout="vertical">
-                <XAxis type="number" tick={{ fontSize: 12 }} stroke={isDark ? '#a1a1aa' : '#64748b'} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={80} stroke={isDark ? '#a1a1aa' : '#64748b'} />
-                <Tooltip 
-                  cursor={false}
-                  formatter={(value) => `$${value.toLocaleString()}`}
-                  contentStyle={{ background: isDark ? '#252525' : '#fff', border: 'none', borderRadius: '8px' }}
-                  itemStyle={{ color: isDark ? '#e5e5e5' : '#1e293b' }}
-                />
-                <Bar dataKey="amount" fill={colors.success} radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <Text c="dimmed" ta="center" py="xl">No earnings yet</Text>
-          )}
-        </Card>
-      </SimpleGrid>
-
-      <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Text fw={600} mb="md">Balance by Account</Text>
           {accountData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -347,28 +288,6 @@ export default function Dashboard() {
             </ResponsiveContainer>
           ) : (
             <Text c="dimmed" ta="center" py="xl">No savings data yet</Text>
-          )}
-        </Card>
-
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
-          <Text fw={600} mb="md">Top Expenses</Text>
-          {categoryData.length > 0 ? (
-            <Stack gap="xs">
-              {categoryData.slice(0, 5).map((cat, i) => {
-                const percent = categoryData.reduce((s, c) => s + c.amount, 0)
-                return (
-                  <div key={i}>
-                    <Group justify="space-between" mb={4}>
-                      <Text size="sm">{cat.name}</Text>
-                      <Text size="sm" fw={500}>${cat.amount.toLocaleString()}</Text>
-                    </Group>
-                    <Progress value={(cat.amount / percent) * 100} color={colors.danger} size="sm" radius="xl" />
-                  </div>
-                )
-              })}
-            </Stack>
-          ) : (
-            <Text c="dimmed" ta="center" py="xl">No expenses yet</Text>
           )}
         </Card>
       </SimpleGrid>
