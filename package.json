@@ -13,7 +13,6 @@
     "build": "npm run build:web"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.99.3",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "electron-updater": "^6.8.3",

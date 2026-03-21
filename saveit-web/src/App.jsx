@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { logout, onAuthStateChange, supabase, setToken } from './api'
+import { getToken, logout } from './api'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import Accounts from './components/Accounts'
@@ -17,17 +17,9 @@ function App() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const { data: { subscription } } = onAuthStateChange((event, session) => {
-      if (session?.access_token) {
-        setToken(session.access_token)
-        setIsAuthenticated(true)
-      } else {
-        setIsAuthenticated(false)
-      }
-      setLoading(false)
-    })
-
-    return () => subscription.unsubscribe()
+    const token = getToken()
+    setIsAuthenticated(!!token)
+    setLoading(false)
   }, [])
 
   const handleLogout = () => {

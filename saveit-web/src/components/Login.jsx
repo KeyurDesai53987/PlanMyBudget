@@ -1,31 +1,95 @@
-import { useState } from 'react'
-import { TextInput, PasswordInput, Button, Card, Text, Stack, Alert, useMantineColorScheme, Group, Divider } from '@mantine/core'
-import { IconWallet, IconMail, IconLock, IconBrandGoogle } from '@tabler/icons-react'
-import { login, register, signInWithGoogle } from '../api'
+import { useState, useEffect, useRef } from 'react'
+import { TextInput, PasswordInput, Button, Card, Text, Stack, Alert, useMantineColorScheme, Group, Divider, Loader } from '@mantine/core'
+import { IconWallet, IconMail, IconLock, IconUser, IconBrandGoogle } from '@tabler/icons-react'
+import { login, sendOTP, verifyOTP, googleAuth } from '../api'
 
 export default function Login({ onLogin }) {
   const { colorScheme } = useMantineColorScheme()
   const isDark = colorScheme === 'dark'
   const [isRegister, setIsRegister] = useState(false)
+  const [step, setStep] = useState('credentials') // credentials, otp
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
+  const [otp, setOtp] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const googleButtonRef = useRef(null)
 
-  const handleGoogleLogin = async () => {
-    setError('')
+  useEffect(() => {
+    const loadGoogleScript = () => {
+      if (window.google) return
+      const script = document.createElement('script')
+      script.src = 'https://accounts.google.com/gsi/client'
+      script.async = true
+      script.defer = true
+      document.body.appendChild(script)
+    }
+    loadGoogleScript()
+  }, [])
+
+  useEffect(() => {
+    if (window.google && window.google.accounts && googleButtonRef.current) {
+      window.google.accounts.id.initialize({
+        client_id: window.ENV?.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+        callback: handleGoogleResponse
+      })
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: isDark ? 'filled_black' : 'outline',
+        size: 'large',
+        width: '100%'
+      })
+    }
+  }, [isDark])
+
+  const handleGoogleResponse = async (response) => {
     setGoogleLoading(true)
+    setError('')
     try {
-      await signInWithGoogle()
+      await googleAuth(response.credential)
+      onLogin()
     } catch (err) {
       setError(err.message)
+    } finally {
       setGoogleLoading(false)
     }
   }
 
-  const handleEmailLogin = async (e) => {
+  const handleSendOTP = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      if (!email) throw new Error('Email required')
+      if (!password || password.length < 6) throw new Error('Password must be at least 6 characters')
+      
+      await sendOTP(email)
+      setStep('otp')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      if (!otp || otp.length !== 6) throw new Error('Enter 6-digit OTP')
+      
+      await verifyOTP(email, otp, password, name)
+      onLogin()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLogin = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
@@ -39,19 +103,10 @@ export default function Login({ onLogin }) {
     }
   }
 
-  const handleEmailRegister = async (e) => {
-    e.preventDefault()
+  const handleBack = () => {
+    setStep('credentials')
+    setOtp('')
     setError('')
-    setLoading(true)
-    try {
-      await register(email, password, name)
-      alert('Check your email for a verification link!')
-      setIsRegister(false)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
   }
 
   return (
@@ -79,84 +134,123 @@ export default function Login({ onLogin }) {
             </Alert>
           )}
           
-          <Button 
-            fullWidth 
-            variant="outline"
-            color="gray"
-            leftSection={<IconBrandGoogle size={18} />}
-            onClick={handleGoogleLogin}
-            loading={googleLoading}
-          >
-            Continue with Google
-          </Button>
-          
-          <Divider label="or" labelPosition="center" />
-          
           {isRegister ? (
-            <form onSubmit={handleEmailRegister}>
-              <Stack gap="sm">
-                <TextInput
-                  label="Name"
-                  placeholder="Your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  leftSection={<IconMail size={16} />}
-                />
-                <TextInput
-                  label="Email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  leftSection={<IconMail size={16} />}
-                  required
-                />
-                <PasswordInput
-                  label="Password"
-                  placeholder="Min 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  leftSection={<IconLock size={16} />}
-                  required
-                />
-                <Button 
-                  type="submit" 
-                  fullWidth 
-                  loading={loading}
-                  color="gray"
-                >
-                  Create Account
-                </Button>
-              </Stack>
-            </form>
+            step === 'credentials' ? (
+              <form onSubmit={handleSendOTP}>
+                <Stack gap="sm">
+                  <TextInput
+                    label="Name"
+                    placeholder="Your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    leftSection={<IconUser size={16} />}
+                  />
+                  <TextInput
+                    label="Email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    leftSection={<IconMail size={16} />}
+                    required
+                  />
+                  <PasswordInput
+                    label="Password"
+                    placeholder="Min 6 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    leftSection={<IconLock size={16} />}
+                    required
+                  />
+                  <Button 
+                    type="submit" 
+                    fullWidth 
+                    loading={loading}
+                    color="gray"
+                  >
+                    Continue
+                  </Button>
+                </Stack>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyOTP}>
+                <Stack gap="sm">
+                  <div style={{ textAlign: 'center' }}>
+                    <Text size="sm" c="dimmed" mb="xs">
+                      We sent a verification code to
+                    </Text>
+                    <Text size="sm" fw={500}>{email}</Text>
+                  </div>
+                  <TextInput
+                    label="Verification Code"
+                    placeholder="Enter 6-digit code"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    maxLength={6}
+                    style={{ textAlign: 'center', letterSpacing: '8px', fontSize: '24px' }}
+                    styles={{ input: { textAlign: 'center', letterSpacing: '8px', fontSize: '24px' } }}
+                  />
+                  <Button 
+                    type="submit" 
+                    fullWidth 
+                    loading={loading}
+                    color="gray"
+                  >
+                    Verify & Create Account
+                  </Button>
+                  <Button 
+                    variant="subtle" 
+                    fullWidth 
+                    color="gray"
+                    onClick={handleBack}
+                    disabled={loading}
+                  >
+                    Back
+                  </Button>
+                </Stack>
+              </form>
+            )
           ) : (
-            <form onSubmit={handleEmailLogin}>
-              <Stack gap="sm">
-                <TextInput
-                  label="Email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  leftSection={<IconMail size={16} />}
-                  required
-                />
-                <PasswordInput
-                  label="Password"
-                  placeholder="Your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  leftSection={<IconLock size={16} />}
-                  required
-                />
-                <Button 
-                  type="submit" 
-                  fullWidth 
-                  loading={loading}
-                  color="gray"
-                >
-                  Sign In
-                </Button>
-              </Stack>
-            </form>
+            <>
+              <form onSubmit={handleLogin}>
+                <Stack gap="sm">
+                  <TextInput
+                    label="Email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    leftSection={<IconMail size={16} />}
+                    required
+                  />
+                  <PasswordInput
+                    label="Password"
+                    placeholder="Your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    leftSection={<IconLock size={16} />}
+                    required
+                  />
+                  <Button 
+                    type="submit" 
+                    fullWidth 
+                    loading={loading}
+                    color="gray"
+                  >
+                    Sign In
+                  </Button>
+                </Stack>
+              </form>
+              
+              <Divider label="or" labelPosition="center" />
+              
+              <div ref={googleButtonRef} style={{ minHeight: 44 }}>
+                {googleLoading && (
+                  <Group justify="center" py="xs">
+                    <Loader size="sm" />
+                    <Text size="sm" c="dimmed">Signing in...</Text>
+                  </Group>
+                )}
+              </div>
+            </>
           )}
           
           <Text 
@@ -164,7 +258,7 @@ export default function Login({ onLogin }) {
             c="dimmed" 
             ta="center"
             style={{ cursor: 'pointer' }}
-            onClick={() => { setIsRegister(!isRegister); setError('') }}
+            onClick={() => { setIsRegister(!isRegister); setStep('credentials'); setError(''); setOtp(''); }}
           >
             {isRegister ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
           </Text>

@@ -1,10 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-export const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder')
-
 const API_BASE = '/api'
 
 function getStoredToken() {
@@ -41,46 +34,48 @@ export async function api(path, options = {}) {
 }
 
 export async function login(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
+  const resp = await api('/users/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password })
   })
-  if (error) throw new Error(error.message)
-  setToken(data.session.access_token)
-  return data
+  setToken(resp.token)
+  return resp
 }
 
-export async function register(email, password, name) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { name }
-    }
+export async function register(email, password) {
+  const resp = await api('/users/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password })
   })
-  if (error) throw new Error(error.message)
-  if (data.session) {
-    setToken(data.session.access_token)
-  }
-  return data
+  return resp
 }
 
-export async function signInWithGoogle() {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: window.location.origin
-    }
+export async function sendOTP(email) {
+  const resp = await api('/auth/send-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email })
   })
-  if (error) throw new Error(error.message)
-  return data
+  return resp
+}
+
+export async function verifyOTP(email, otp, password, name) {
+  const resp = await api('/auth/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email, otp, password, name })
+  })
+  setToken(resp.token)
+  return resp
+}
+
+export async function googleAuth(credential) {
+  const resp = await api('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ idToken: credential })
+  })
+  setToken(resp.token)
+  return resp
 }
 
 export function logout() {
-  supabase.auth.signOut()
   clearToken()
-}
-
-export function onAuthStateChange(callback) {
-  return supabase.auth.onAuthStateChange(callback)
 }
