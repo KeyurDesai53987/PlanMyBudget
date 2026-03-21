@@ -3,9 +3,7 @@ const cors = require('cors')
 const path = require('path')
 const { v4: uuidv4 } = require('uuid')
 const { Pool } = require('pg')
-const nodemailer = require('nodemailer')
-const bcrypt = require('bcryptjs')
-const { OAuth2Client } = require('google-auth-library')
+const { createClient } = require('@supabase/supabase-js')
 
 const app = express()
 const PORT = process.env.PORT || 4000
@@ -14,30 +12,11 @@ app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// Email transporter (configure your SMTP in environment variables)
-const transporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE || 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-})
-
-// Google OAuth client
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
-
-// OTP store (in production, use Redis or database)
-const otpStore = new Map()
-
-// Generate 6-digit OTP
-function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString()
-}
-
-// Send OTP email
-async function sendOTPEmail(email, otp) {
-  try {
-    await transporter.sendMail({
+// Supabase client for auth
+const supabase = createClient(
+  process.env.SUPABASE_URL || 'https://placeholder.supabase.co',
+  process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || 'placeholder'
+)
       from: process.env.EMAIL_USER || 'noreply@planmybudget.app',
       to: email,
       subject: 'Your PlanMyBudget OTP',
@@ -240,29 +219,43 @@ function verifyPassword(pw, hash) {
   return bcrypt.compareSync(pw, hash)
 }
 
-// Auth middleware
+// Auth middleware - validates Supabase JWT tokens
 async function auth(req, res, next) {
   const header = req.headers['authorization'] || ''
   if (!header) return res.status(401).json({ error: 'Unauthorized' })
-  const token = header.replace('Bearer ', '').trim()
-  const session = await db.get('SELECT * FROM sessions WHERE token = $1', [token])
-  if (!session) return res.status(401).json({ error: 'Invalid token' })
-  req.userid = session.userid
-  next()
+  
+  try {
+    const token = header.replace('Bearer ', '').trim()
+    const { data: { user }, error } = await supabase.auth.getUser(token)
+    
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid token' })
+    }
+    
+    req.userid = user.id
+    req.useremail = user.email
+    req.username = user.user_metadata?.name || ''
+    next()
+  } catch (err) {
+    console.error('Auth error:', err)
+    return res.status(401).json({ error: 'Invalid token' })
+  }
 }
 
 /** API Routes **/
 
 // Status
-app.get('/api/status', (req, res) => res.json({ status: 'ok' }))
+app.get('/api/status', (req, res) => res.json({ status: 'ok' })
 
-// Register
+// Register - now handled by Supabase client-side
 app.post('/api/users/register', async (req, res) => {
-  const { email, password } = req.body || {}
-  if (!email || !password) return res.status(400).json({ error: 'Email and password required' })
-  
-  const exists = await db.get('SELECT * FROM users WHERE LOWER(email) = $1', [email.toLowerCase()])
-  if (exists) return res.status(400).json({ error: 'User already exists' })
+  res.status(501).json({ error: 'Registration is handled client-side with Supabase Auth' })
+})
+
+// Login - now handled by Supabase client-side
+app.post('/api/users/login', async (req, res) => {
+  res.status(501).json({ error: 'Login is handled client-side with Supabase Auth' })
+})
   
   const user = {
     id: uuidv4(),
