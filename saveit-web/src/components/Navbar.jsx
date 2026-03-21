@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Group, Button, Text, Box, ActionIcon, Drawer, Stack, useMantineColorScheme, Burger, Avatar, Menu, Divider } from '@mantine/core'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { IconWallet, IconLogout, IconMoon, IconSun, IconHome, IconBuildingBank, IconCreditCard, IconChartBar, IconTarget, IconRepeat, IconTag, IconSettings, IconUser, IconChevronDown } from '@tabler/icons-react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { colors } from '../theme'
 
@@ -68,6 +68,7 @@ export default function Navbar({ onLogout }) {
   const [opened, { close, toggle }] = useDisclosure(false)
   const isMobile = useMediaQuery('(max-width: 768px)')
   const [user, setUser] = useState({ name: '', email: '' })
+  const navigate = useNavigate()
 
   useEffect(() => {
     const loadUser = async () => {
@@ -148,7 +149,7 @@ export default function Navbar({ onLogout }) {
                     <Text size="xs" c="dimmed">{user.email}</Text>
                   </Box>
                   <Divider />
-                  <Menu.Item leftSection={<IconUser size={16} />} component="a" href="/settings">
+                  <Menu.Item leftSection={<IconUser size={16} />} onClick={() => { navigate('/settings'); }}>
                     Settings
                   </Menu.Item>
                   <Menu.Item leftSection={<IconLogout size={16} />} color="red" onClick={handleLogout}>
