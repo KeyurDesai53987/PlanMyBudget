@@ -232,8 +232,6 @@ INSERT INTO budgets (id, userid, month, year, currency, lines)
 }
 
 // Password hashing
-const bcrypt = require('bcryptjs')
-
 function hashPassword(pw) {
   return bcrypt.hashSync(pw, 10)
 }
