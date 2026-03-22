@@ -772,3 +772,53 @@ val accounts = accountsResponse.body()?.accounts
 | Update Goal | `/goals/:id` | PUT |
 | Get Categories | `/categories` | GET |
 | Create Category | `/categories` | POST |
+
+---
+
+## Database Security (Row Level Security)
+
+For enhanced security at the database level, enable PostgreSQL Row Level Security (RLS) policies in your Supabase dashboard.
+
+### Why RLS?
+
+RLS provides an additional layer of security by ensuring users can only access their own data directly in the database, regardless of API-level checks.
+
+### Setup Instructions
+
+1. Go to your **Supabase Dashboard**
+2. Navigate to **SQL Editor**
+3. Copy and paste the contents of `supabase-rls.sql`
+4. Click **Run** to execute
+
+### What RLS Protects
+
+| Table | Protection |
+|-------|------------|
+| `accounts` | Users can only see/modify their own accounts |
+| `categories` | Users can only see/modify their own categories |
+| `transactions` | Users can only access transactions from their own accounts |
+| `budgets` | Users can only see/modify their own budgets |
+| `goals` | Users can only see/modify their own goals |
+| `recurring` | Users can only see/modify their own recurring transactions |
+| `api_keys` | Users can only see/revoke their own API keys |
+
+### Testing RLS
+
+After enabling RLS, verify it works:
+
+```sql
+-- Check if RLS is enabled on a table
+SELECT tablename, rowsecurity 
+FROM pg_tables 
+WHERE schemaname = 'public';
+
+-- Test that a user can't see other users' data
+SELECT * FROM accounts; -- Should only return your accounts
+SELECT * FROM goals;   -- Should only return your goals
+```
+
+### Important Notes
+
+- RLS policies are additive to API-level authorization
+- The `users` table does not have RLS (users manage their own profile via API)
+- The `sessions` table does not have RLS (tokens are validated by the API)
