@@ -140,9 +140,17 @@ let updateAvailable = false
 let updateVersion = ''
 
 function setupAutoUpdater() {
+  const { GitHubProvider } = require('electron-updater')
+  
   autoUpdater.logger = require('electron-log')
   autoUpdater.logger.transports.file.level = 'info'
-  autoUpdater.autoDownload = false // Let user choose when to download
+  autoUpdater.autoDownload = false
+  
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'KeyurDesai53987',
+    repo: 'PlanMyBudget'
+  })
   
   autoUpdater.on('checking-for-update', () => {
     console.log('Checking for updates...')
