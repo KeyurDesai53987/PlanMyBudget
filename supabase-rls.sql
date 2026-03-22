@@ -1,6 +1,19 @@
 -- Row Level Security (RLS) Policies for PlanMyBudget
 -- Run these commands in the Supabase SQL Editor to enable RLS
 
+-- Create the helper function FIRST (used by policies)
+CREATE OR REPLACE FUNCTION current_user_id()
+RETURNS TEXT AS $$
+BEGIN
+  RETURN (
+    SELECT coalesce(
+      nullif(current_setting('request.jwt.claims', true)::json->>'user_id', ''),
+      nullif(current_setting('request.jwt.claims', true)::json->>'sub', '')
+    )
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Enable RLS on all tables
 ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
@@ -30,7 +43,6 @@ CREATE POLICY "Users can manage own categories" ON categories
   USING (userid = current_user_id());
 
 -- TRANSACTIONS: Users can only access transactions from their own accounts
--- This requires a subquery to check account ownership through the accounts table
 CREATE POLICY "Users can manage own transactions" ON transactions
   FOR ALL
   USING (
@@ -58,20 +70,3 @@ CREATE POLICY "Users can manage own recurring" ON recurring
 CREATE POLICY "Users can manage own api_keys" ON api_keys
   FOR ALL
   USING (userid = current_user_id());
-
--- Note: The current_user_id() function above is a placeholder.
--- In Supabase, you need to create this function that extracts the user ID
--- from the JWT token's 'sub' claim or a custom claim.
-
--- Create the helper function if it doesn't exist
-CREATE OR REPLACE FUNCTION current_user_id()
-RETURNS TEXT AS $$
-BEGIN
-  RETURN (
-    SELECT coalesce(
-      nullif(current_setting('request.jwt.claims', true)::json->>'user_id', ''),
-      nullif(current_setting('request.jwt.claims', true)::json->>'sub', '')
-    )
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
