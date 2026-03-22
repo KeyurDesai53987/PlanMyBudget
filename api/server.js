@@ -229,6 +229,19 @@ async function initDb() {
     )
   `)
 
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id TEXT PRIMARY KEY,
+      userid TEXT NOT NULL,
+      name TEXT NOT NULL,
+      keyhash TEXT NOT NULL,
+      keyprefix TEXT NOT NULL,
+      active INTEGER DEFAULT 1,
+      createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (userid) REFERENCES users(id)
+    )
+  `)
+
   // Seed demo user if not exists
   const demoUser = await db.get('SELECT * FROM users WHERE email = $1', ['demo@saveit.app'])
   if (!demoUser) {
@@ -279,17 +292,39 @@ function verifyPassword(pw, hash) {
   return bcrypt.compareSync(pw, hash)
 }
 
-// Auth middleware
+// Auth middleware - supports both Bearer tokens and API keys
 async function auth(req, res, next) {
-  const header = req.headers['authorization'] || ''
-  if (!header) return res.status(401).json({ error: 'Unauthorized' })
-  const token = header.replace('Bearer ', '').trim()
+  const authHeader = req.headers['authorization'] || ''
+  const apiKey = req.headers['x-api-key'] || ''
   
-  const session = await db.get('SELECT * FROM sessions WHERE token = $1 AND (expiresat IS NULL OR expiresat > NOW())', [token])
-  if (!session) return res.status(401).json({ error: 'Session expired or invalid' })
+  // Try Bearer token first
+  if (authHeader) {
+    const token = authHeader.replace('Bearer ', '').trim()
+    const session = await db.get('SELECT * FROM sessions WHERE token = $1 AND (expiresat IS NULL OR expiresat > NOW())', [token])
+    if (session) {
+      req.userid = session.userid
+      return next()
+    }
+  }
   
-  req.userid = session.userid
-  next()
+  // Try API key
+  if (apiKey) {
+    const keyPrefix = apiKey.slice(0, 10)
+    const keyHash = bcrypt.hashSync(apiKey, 'salt') // Verify without storing plain
+    
+    // Find key by prefix and verify
+    const storedKey = await db.get('SELECT * FROM api_keys WHERE keyprefix = $1 AND active = 1', [keyPrefix])
+    if (storedKey) {
+      // Verify the key matches
+      if (bcrypt.compareSync(apiKey, storedKey.keyhash)) {
+        req.userid = storedKey.userid
+        req.isApiKey = true
+        return next()
+      }
+    }
+  }
+  
+  return res.status(401).json({ error: 'Unauthorized' })
 }
 
 /** API Routes **/
@@ -594,6 +629,41 @@ app.put('/api/preferences', auth, async (req, res) => {
       locale: user?.locale || 'US'
     }
   })
+})
+
+// API Keys Management
+app.post('/api/api-keys', auth, async (req, res) => {
+  const { name } = req.body || {}
+  if (!name) return res.status(400).json({ error: 'Name required' })
+  
+  const id = uuidv4()
+  const apiKey = 'sk_live_' + crypto.randomBytes(24).toString('hex')
+  const keyPrefix = apiKey.slice(0, 10)
+  const keyHash = bcrypt.hashSync(apiKey, 10)
+  
+  await db.run(`
+    INSERT INTO api_keys (id, userid, name, keyhash, keyprefix, createdat)
+    VALUES ($1, $2, $3, $4, $5, NOW())
+  `, [id, req.userid, name, keyHash, keyPrefix])
+  
+  res.json({
+    id,
+    apiKey,
+    name,
+    createdAt: new Date().toISOString(),
+    message: 'Save this API key. It will not be shown again.'
+  })
+})
+
+app.get('/api/api-keys', auth, async (req, res) => {
+  const keys = await db.all('SELECT id, name, keyprefix, active, createdat FROM api_keys WHERE userid = $1 ORDER BY createdat DESC', [req.userid])
+  res.json({ apiKeys: keys })
+})
+
+app.delete('/api/api-keys/:id', auth, async (req, res) => {
+  const { id } = req.params
+  await db.run('UPDATE api_keys SET active = 0 WHERE id = $1 AND userid = $2', [id, req.userid])
+  res.json({ success: true })
 })
 
 // Profile
