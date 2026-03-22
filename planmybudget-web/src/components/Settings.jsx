@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Avatar, Badge, Divider, Switch, useMantineColorScheme, SimpleGrid, Textarea, CopyButton, ActionIcon, Tooltip, Alert, Modal, FileInput, Progress } from '@mantine/core'
 import { IconUser, IconLock, IconCheck, IconInfoCircle, IconPalette, IconCalendar, IconCurrencyDollar, IconLogout, IconTrendingUp, IconTarget, IconReceipt, IconKey, IconCopy, IconCheck as IconCheckFilled, IconDownload, IconUpload, IconDatabase, IconAlertCircle, IconRefresh, IconRocket, IconBell } from '@tabler/icons-react'
-import { api } from '../api'
+import { api, isDemoUser } from '../api'
 import { colors } from '../theme'
 import { SettingsSkeleton } from './Skeletons'
 
@@ -45,8 +45,10 @@ export default function Settings() {
   const [allData, setAllData] = useState({ accounts: [], transactions: [], budgets: [], goals: [], categories: [], recurring: [] })
   const [updateStatus, setUpdateStatus] = useState({ checking: false, available: false, downloading: false, ready: false, version: null, error: null, progress: 0 })
   const [isElectron, setIsElectron] = useState(false)
+  const [isDemo, setIsDemo] = useState(false)
 
   useEffect(() => { 
+    setIsDemo(isDemoUser())
     loadData()
     initUpdateChecker()
   }, [])
@@ -475,90 +477,99 @@ export default function Settings() {
           </Stack>
         </Card>
 
+        {!isDemo && (
+          <>
+            <Card shadow="sm" padding="lg" radius="md" withBorder>
+              <Group gap="sm" mb="md">
+                <IconDatabase size={20} />
+                <Text fw={600}>Backup & Restore</Text>
+              </Group>
+              <Text size="xs" c="dimmed" mb="md">
+                Download a full backup of your data or restore from a previous backup.
+              </Text>
+              <Stack gap="sm">
+                <Group>
+                  <Button
+                    variant="light"
+                    color="gray"
+                    leftSection={<IconDownload size={16} />}
+                    onClick={handleBackup}
+                    loading={backupLoading}
+                  >
+                    Export Backup
+                  </Button>
+                  <Button
+                    variant="light"
+                    color="gray"
+                    leftSection={<IconUpload size={16} />}
+                    onClick={() => setRestoreModalOpen(true)}
+                  >
+                    Import Backup
+                  </Button>
+                </Group>
+                <Text size="xs" c="dimmed">
+                  Backup includes: {allData.accounts.length} accounts, {allData.transactions.length} transactions, 
+                  {allData.goals.length} goals, {allData.categories.length} categories, {allData.recurring.length} recurring
+                </Text>
+              </Stack>
+            </Card>
+
+            <Card shadow="sm" padding="lg" radius="md" withBorder>
+              <Group gap="sm" mb="md">
+                <IconBell size={20} />
+                <Text fw={600}>Notifications</Text>
+              </Group>
+              <Group justify="space-between" mb="sm">
+                <div>
+                  <Text size="sm">Push Notifications</Text>
+                  <Text size="xs" c="dimmed">Receive alerts for budget warnings and reminders</Text>
+                </div>
+                <Switch
+                  checked={pushEnabled}
+                  onChange={togglePushNotifications}
+                  disabled={pushLoading}
+                  color="gray"
+                />
+              </Group>
+              {pushEnabled && (
+                <Alert color="green" variant="light" mt="sm">
+                  Push notifications are enabled
+                </Alert>
+              )}
+            </Card>
+          </>
+        )}
+
+        {isDemo && (
+          <Alert color="blue" variant="light">
+            <Text size="sm" fw={500}>Demo Account</Text>
+            <Text size="xs">This is a demo account. Create your own account to access all features including backup, notifications, and more.</Text>
+          </Alert>
+        )}
+
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Group gap="sm" mb="md">
-            <IconDatabase size={20} />
-            <Text fw={600}>Backup & Restore</Text>
+            <IconRocket size={20} />
+            <Text fw={600}>App Updates</Text>
           </Group>
           <Text size="xs" c="dimmed" mb="md">
-            Download a full backup of your data or restore from a previous backup.
+            Download the latest version of PlanMyBudget from GitHub releases.
           </Text>
-          <Stack gap="sm">
-            <Group>
-              <Button
-                variant="light"
-                color="gray"
-                leftSection={<IconDownload size={16} />}
-                onClick={handleBackup}
-                loading={backupLoading}
-              >
-                Export Backup
-              </Button>
-              <Button
-                variant="light"
-                color="gray"
-                leftSection={<IconUpload size={16} />}
-                onClick={() => setRestoreModalOpen(true)}
-              >
-                Import Backup
-              </Button>
-            </Group>
-            <Text size="xs" c="dimmed">
-              Backup includes: {allData.accounts.length} accounts, {allData.transactions.length} transactions, 
-              {allData.goals.length} goals, {allData.categories.length} categories, {allData.recurring.length} recurring
-            </Text>
-          </Stack>
+          <Alert color="blue" variant="light" mb="sm">
+            Current version: 1.1.0. Check GitHub releases for updates.
+          </Alert>
+          <Button
+            component="a"
+            href="https://github.com/KeyurDesai53987/PlanMyBudget/releases"
+            target="_blank"
+            variant="light"
+            color="gray"
+            size="xs"
+            leftSection={<IconDownload size={14} />}
+          >
+            Download Latest Version
+          </Button>
         </Card>
-
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
-          <Group gap="sm" mb="md">
-            <IconBell size={20} />
-            <Text fw={600}>Notifications</Text>
-          </Group>
-          <Group justify="space-between" mb="sm">
-            <div>
-              <Text size="sm">Push Notifications</Text>
-              <Text size="xs" c="dimmed">Receive alerts for budget warnings and reminders</Text>
-            </div>
-            <Switch
-              checked={pushEnabled}
-              onChange={togglePushNotifications}
-              disabled={pushLoading}
-              color="gray"
-            />
-          </Group>
-          {pushEnabled && (
-            <Alert color="green" variant="light" mt="sm">
-              Push notifications are enabled
-            </Alert>
-          )}
-        </Card>
-
-        {isElectron && (
-          <Card shadow="sm" padding="lg" radius="md" withBorder>
-            <Group gap="sm" mb="md">
-              <IconRocket size={20} />
-              <Text fw={600}>App Updates</Text>
-            </Group>
-            <Text size="xs" c="dimmed" mb="md">
-              Download the latest version of PlanMyBudget from GitHub releases.
-            </Text>
-            <Alert color="blue" variant="light" mb="sm">
-              Current version: 1.1.0. Check GitHub releases for updates.
-            </Alert>
-            <Button
-              component="a"
-              href="https://github.com/KeyurDesai53987/PlanMyBudget/releases"
-              target="_blank"
-              variant="light"
-              color="gray"
-              size="xs"
-              leftSection={<IconDownload size={14} />}
-            >
-              Download Latest Version
-            </Button>
-          </Card>
-        )}
 
         {/* API Keys section hidden temporarily */}
         {/* 

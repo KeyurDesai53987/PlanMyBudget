@@ -39,6 +39,9 @@ export async function login(email, password) {
     body: JSON.stringify({ email, password })
   })
   setToken(resp.token)
+  if (email === 'demo@saveit.app') {
+    setDemoEmail(email)
+  }
   return resp
 }
 
@@ -81,5 +84,17 @@ export function logout() {
 }
 
 export async function loginAsDemo() {
+  localStorage.setItem('demo_email', 'demo@saveit.app')
   return login('demo@saveit.app', 'password')
+}
+
+export function isDemoUser() {
+  const email = localStorage.getItem('demo_email')
+  return email === 'demo@saveit.app'
+}
+
+export function setDemoEmail(email) {
+  if (email === 'demo@saveit.app') {
+    localStorage.setItem('demo_email', email)
+  }
 }
