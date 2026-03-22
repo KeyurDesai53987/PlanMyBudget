@@ -26,10 +26,9 @@ function startWebServer() {
   
   // Proxy API requests to production backend
   webApp.use('/api', (req, res) => {
-    const http = require('http')
+    const https = require('https')
     const options = {
       hostname: 'saveit-r1gc.onrender.com',
-      port: 443,
       path: '/api' + req.path,
       method: req.method,
       headers: {
@@ -38,7 +37,7 @@ function startWebServer() {
       }
     }
     
-    const proxyReq = http.request(options, (proxyRes) => {
+    const proxyReq = https.request(options, (proxyRes) => {
       let data = ''
       proxyRes.on('data', chunk => data += chunk)
       proxyRes.on('end', () => {
@@ -56,7 +55,8 @@ function startWebServer() {
       })
     })
     
-    proxyReq.on('error', () => {
+    proxyReq.on('error', (err) => {
+      console.error('Proxy error:', err)
       res.status(500).json({ error: 'Unable to connect to server. Please check your internet connection.' })
     })
     

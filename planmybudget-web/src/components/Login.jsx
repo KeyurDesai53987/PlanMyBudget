@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { TextInput, PasswordInput, Button, Card, Text, Stack, Alert, useMantineColorScheme, Group, Checkbox, Progress, Center, Image } from '@mantine/core'
 import { IconMail, IconLock, IconUser, IconArrowLeft } from '@tabler/icons-react'
 import { login, register } from '../api'
@@ -33,6 +33,14 @@ export default function Login({ onLogin }) {
   const [loading, setLoading] = useState(false)
 
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password])
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberEmail')
+    if (savedEmail) {
+      setEmail(savedEmail)
+      setRememberMe(true)
+    }
+  }, [])
 
   const handleLogin = async (e) => {
     e.preventDefault()
