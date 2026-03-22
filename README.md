@@ -648,7 +648,7 @@ const ratelimit = new Ratelimit({
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || [
     'http://localhost:5173',
-    'https://planmybudget.vercel.app'
+    'https://planmybudget.xyz'
   ]
 }))
 ```

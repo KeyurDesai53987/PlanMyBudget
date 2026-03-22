@@ -2,7 +2,7 @@
 
 ## Base URL
 ```
-Production: https://saveit-r1gc.onrender.com/api
+Production: https://planmybudget.xyz/api
 Local: http://localhost:4000/api
 ```
 
