@@ -53,7 +53,7 @@
     "mac": {
       "category": "public.app-category.finance",
       "target": "dmg",
-      "icon": "planmybudget-web/public/icon.icns"
+      "icon": "planmybudget-web/public/icons/PlanMyBudget.icns"
     },
     "win": {
       "target": "nsis"
