@@ -29,15 +29,22 @@ function startWebServer() {
     const https = require('https')
     
     const body = req.body ? JSON.stringify(req.body) : ''
+    const headers = {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body),
+      host: 'saveit-r1gc.onrender.com'
+    }
+    
+    // Forward authorization header if present
+    if (req.headers.authorization) {
+      headers['Authorization'] = req.headers.authorization
+    }
+    
     const options = {
       hostname: 'saveit-r1gc.onrender.com',
       path: '/api' + req.path,
       method: req.method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-        host: 'saveit-r1gc.onrender.com'
-      }
+      headers: headers
     }
     
     const proxyReq = https.request(options, (proxyRes) => {
@@ -45,6 +52,10 @@ function startWebServer() {
       proxyRes.on('data', chunk => data += chunk)
       proxyRes.on('end', () => {
         res.status(proxyRes.statusCode)
+        // Forward Set-Cookie header if present
+        if (proxyRes.headers['set-cookie']) {
+          res.setHeader('Set-Cookie', proxyRes.headers['set-cookie'])
+        }
         try {
           res.json(JSON.parse(data))
         } catch {
