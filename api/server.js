@@ -669,7 +669,16 @@ app.delete('/api/api-keys/:id', auth, async (req, res) => {
 // Profile
 app.get('/api/profile', auth, async (req, res) => {
   const user = await db.get('SELECT id, email, name, preferredCurrency, locale, createdat FROM users WHERE id = $1', [req.userid])
-  res.json({ preferences: user })
+  res.json({ 
+    preferences: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      currency: user.preferredCurrency,
+      locale: user.locale,
+      createdAt: user.createdat
+    }
+  })
 })
 
 app.put('/api/profile', auth, async (req, res) => {
