@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Avatar, Badge, Divider, Switch, useMantineColorScheme, SimpleGrid, Textarea, CopyButton, ActionIcon, Tooltip } from '@mantine/core'
-import { IconUser, IconLock, IconCheck, IconInfoCircle, IconPalette, IconCalendar, IconCurrencyDollar, IconLogout, IconTrendingUp, IconTarget, IconReceipt, IconKey, IconCopy, IconCheck as IconCheckFilled } from '@tabler/icons-react'
+import { useState, useEffect, useRef } from 'react'
+import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Avatar, Badge, Divider, Switch, useMantineColorScheme, SimpleGrid, Textarea, CopyButton, ActionIcon, Tooltip, Alert, Modal, FileInput } from '@mantine/core'
+import { IconUser, IconLock, IconCheck, IconInfoCircle, IconPalette, IconCalendar, IconCurrencyDollar, IconLogout, IconTrendingUp, IconTarget, IconReceipt, IconKey, IconCopy, IconCheck as IconCheckFilled, IconDownload, IconUpload, IconDatabase, IconAlertCircle } from '@tabler/icons-react'
 import { api } from '../api'
 import { colors } from '../theme'
 import { SettingsSkeleton } from './Skeletons'
@@ -38,19 +38,35 @@ export default function Settings() {
   const [apiKeys, setApiKeys] = useState([])
   const [newKeyName, setNewKeyName] = useState('')
   const [generatedKey, setGeneratedKey] = useState(null)
+  const [restoreModalOpen, setRestoreModalOpen] = useState(false)
+  const [restoreFile, setRestoreFile] = useState(null)
+  const [backupLoading, setBackupLoading] = useState(false)
+  const [restoreLoading, setRestoreLoading] = useState(false)
+  const [allData, setAllData] = useState({ accounts: [], transactions: [], budgets: [], goals: [], categories: [], recurring: [] })
 
   useEffect(() => { loadData() }, [])
 
   const loadData = async () => {
     try {
-      const [profileRes, accountsRes, transactionsRes, goalsRes, budgetsRes, keysRes] = await Promise.all([
+      const [profileRes, accountsRes, transactionsRes, goalsRes, budgetsRes, categoriesRes, recurringRes, keysRes] = await Promise.all([
         api('/profile'),
         api('/accounts'),
         api('/transactions'),
         api('/goals'),
         api('/budgets'),
+        api('/categories'),
+        api('/recurring'),
         api('/api-keys')
       ])
+      
+      setAllData({
+        accounts: accountsRes.accounts || [],
+        transactions: transactionsRes.transactions || [],
+        budgets: budgetsRes.budgets || [],
+        goals: goalsRes.goals || [],
+        categories: categoriesRes.categories || [],
+        recurring: recurringRes.recurring || []
+      })
       setProfile({
         email: profileRes.preferences?.email || '',
         name: profileRes.preferences?.name || '',
@@ -126,6 +142,138 @@ export default function Settings() {
     } catch (err) {
       setMessage({ type: 'error', text: err.message || 'Failed to revoke API key' })
     }
+  }
+
+  const handleBackup = async () => {
+    setBackupLoading(true)
+    try {
+      const profileRes = await api('/profile')
+      const backup = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        profile: profileRes.preferences,
+        data: allData
+      }
+      
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `planmybudget-backup-${new Date().toISOString().split('T')[0]}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      
+      setMessage({ type: 'success', text: 'Backup downloaded successfully!' })
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Failed to create backup' })
+    }
+    setBackupLoading(false)
+  }
+
+  const handleRestore = async () => {
+    if (!restoreFile) return
+    
+    setRestoreLoading(true)
+    try {
+      const text = await restoreFile.text()
+      const backup = JSON.parse(text)
+      
+      if (!backup.version || !backup.data) {
+        throw new Error('Invalid backup file format')
+      }
+      
+      const { data } = backup
+      
+      let imported = { accounts: 0, transactions: 0, goals: 0, categories: 0, recurring: 0 }
+      
+      for (const account of data.accounts || []) {
+        try {
+          await api('/accounts', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: account.name,
+              type: account.type,
+              balance: account.balance,
+              currency: account.currency || 'USD'
+            })
+          })
+          imported.accounts++
+        } catch (e) { console.error('Account import error:', e) }
+      }
+      
+      for (const category of data.categories || []) {
+        try {
+          await api('/categories', {
+            method: 'POST',
+            body: JSON.stringify({ name: category.name })
+          })
+          imported.categories++
+        } catch (e) { console.error('Category import error:', e) }
+      }
+      
+      for (const goal of data.goals || []) {
+        try {
+          await api('/goals', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: goal.name,
+              targetAmount: goal.targetAmount,
+              currentAmount: goal.currentAmount || 0,
+              dueDate: goal.dueDate
+            })
+          })
+          imported.goals++
+        } catch (e) { console.error('Goal import error:', e) }
+      }
+      
+      for (const transaction of data.transactions || []) {
+        try {
+          await api('/transactions', {
+            method: 'POST',
+            body: JSON.stringify({
+              accountId: transaction.accountId,
+              categoryId: transaction.categoryId,
+              date: transaction.date,
+              amount: transaction.amount,
+              type: transaction.type,
+              description: transaction.description
+            })
+          })
+          imported.transactions++
+        } catch (e) { console.error('Transaction import error:', e) }
+      }
+      
+      for (const item of data.recurring || []) {
+        try {
+          await api('/recurring', {
+            method: 'POST',
+            body: JSON.stringify({
+              accountId: item.accountId,
+              name: item.name,
+              amount: item.amount,
+              type: item.type,
+              frequency: item.frequency,
+              startDate: item.startDate,
+              nextDate: item.nextDate,
+              description: item.description
+            })
+          })
+          imported.recurring++
+        } catch (e) { console.error('Recurring import error:', e) }
+      }
+      
+      setRestoreModalOpen(false)
+      setRestoreFile(null)
+      loadData()
+      
+      setMessage({
+        type: 'success',
+        text: `Restored: ${imported.accounts} accounts, ${imported.transactions} transactions, ${imported.goals} goals, ${imported.categories} categories`
+      })
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Failed to restore backup' })
+    }
+    setRestoreLoading(false)
   }
 
   const getInitials = (name) => {
@@ -254,6 +402,41 @@ export default function Settings() {
           </Stack>
         </Card>
 
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Group gap="sm" mb="md">
+            <IconDatabase size={20} />
+            <Text fw={600}>Backup & Restore</Text>
+          </Group>
+          <Text size="xs" c="dimmed" mb="md">
+            Download a full backup of your data or restore from a previous backup.
+          </Text>
+          <Stack gap="sm">
+            <Group>
+              <Button
+                variant="light"
+                color="gray"
+                leftSection={<IconDownload size={16} />}
+                onClick={handleBackup}
+                loading={backupLoading}
+              >
+                Export Backup
+              </Button>
+              <Button
+                variant="light"
+                color="gray"
+                leftSection={<IconUpload size={16} />}
+                onClick={() => setRestoreModalOpen(true)}
+              >
+                Import Backup
+              </Button>
+            </Group>
+            <Text size="xs" c="dimmed">
+              Backup includes: {allData.accounts.length} accounts, {allData.transactions.length} transactions, 
+              {allData.goals.length} goals, {allData.categories.length} categories, {allData.recurring.length} recurring
+            </Text>
+          </Stack>
+        </Card>
+
         {/* API Keys section hidden temporarily */}
         {/* 
         <Card shadow="sm" padding="lg" radius="md" withBorder>
@@ -290,6 +473,42 @@ export default function Settings() {
           </Stack>
         </Card>
       </Stack>
+
+      <Modal
+        opened={restoreModalOpen}
+        onClose={() => { setRestoreModalOpen(false); setRestoreFile(null); }}
+        title="Import Backup"
+        centered
+      >
+        <Stack gap="md">
+          <Alert color="blue" variant="light" icon={<IconAlertCircle size={16} />}>
+            Importing will add data from the backup file. Existing data will not be deleted.
+          </Alert>
+          
+          <FileInput
+            label="Select Backup File"
+            placeholder="Choose a .json file"
+            accept="application/json"
+            value={restoreFile}
+            onChange={setRestoreFile}
+            required
+          />
+          
+          <Group justify="flex-end">
+            <Button variant="subtle" color="gray" onClick={() => { setRestoreModalOpen(false); setRestoreFile(null); }}>
+              Cancel
+            </Button>
+            <Button
+              color="gray"
+              onClick={handleRestore}
+              loading={restoreLoading}
+              disabled={!restoreFile}
+            >
+              Import
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </div>
   )
 }
