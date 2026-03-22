@@ -22,6 +22,8 @@ ALTER TABLE budgets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recurring ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if they exist (for clean reinstall)
 DROP POLICY IF EXISTS "Users can manage own accounts" ON accounts;
@@ -31,6 +33,8 @@ DROP POLICY IF EXISTS "Users can manage own budgets" ON budgets;
 DROP POLICY IF EXISTS "Users can manage own goals" ON goals;
 DROP POLICY IF EXISTS "Users can manage own recurring" ON recurring;
 DROP POLICY IF EXISTS "Users can manage own api_keys" ON api_keys;
+DROP POLICY IF EXISTS "Users can manage own sessions" ON sessions;
+DROP POLICY IF EXISTS "Users can view own profile" ON users;
 
 -- ACCOUNTS: Users can only access their own accounts
 CREATE POLICY "Users can manage own accounts" ON accounts
@@ -70,3 +74,20 @@ CREATE POLICY "Users can manage own recurring" ON recurring
 CREATE POLICY "Users can manage own api_keys" ON api_keys
   FOR ALL
   USING (userid = current_user_id());
+
+-- SESSIONS: Users can only manage their own sessions (for token management)
+-- Note: PostgREST should NOT expose sessions table directly via API
+-- This is just a safety measure. Better to manage sessions through API endpoints only.
+CREATE POLICY "Users can manage own sessions" ON sessions
+  FOR ALL
+  USING (userid = current_user_id());
+
+-- USERS: Users can only view their own profile (hide email/password from others)
+CREATE POLICY "Users can view own profile" ON users
+  FOR SELECT
+  USING (id = current_user_id());
+
+-- Disable direct API access to sessions table (sessions should be managed via API endpoints)
+-- Note: PostgREST should have sessions table excluded from API exposure
+-- To exclude from PostgREST, add to config: db-schema = "public,storage,extensions"
+-- And ensure sessions is not in the exposed schemas, or use anon key restrictions
