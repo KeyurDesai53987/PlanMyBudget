@@ -484,72 +484,22 @@ export default function Settings() {
               <Text fw={600}>App Updates</Text>
             </Group>
             <Text size="xs" c="dimmed" mb="md">
-              Check for updates and install the latest version of PlanMyBudget.
+              Download the latest version of PlanMyBudget from GitHub releases.
             </Text>
-            {updateStatus.error && (
-              <Alert color="red" variant="light" mb="sm">
-                {updateStatus.error}
-              </Alert>
-            )}
-            {updateStatus.available && !updateStatus.downloading && !updateStatus.ready && (
-              <Alert color="blue" variant="light" mb="sm">
-                Version {updateStatus.version} is available!
-              </Alert>
-            )}
-            {updateStatus.ready && (
-              <Alert color="green" variant="light" mb="sm">
-                Update ready! Click Install to restart and update.
-              </Alert>
-            )}
-            {updateStatus.downloading && (
-              <Stack gap="xs" mb="sm">
-                <Text size="sm">Downloading update...</Text>
-                <Progress value={updateStatus.progress} size="sm" radius="xl" />
-                <Text size="xs" c="dimmed">{Math.round(updateStatus.progress)}% complete</Text>
-              </Stack>
-            )}
-            {updateStatus.checking && (
-              <Text size="sm" c="dimmed">Checking for updates...</Text>
-            )}
-            {!updateStatus.checking && !updateStatus.available && !updateStatus.downloading && !updateStatus.ready && !updateStatus.error && (
-              <Text size="sm" c="dimmed">You're up to date!</Text>
-            )}
-            <Group mt="sm">
-              {!updateStatus.available && !updateStatus.downloading && !updateStatus.ready && (
-                <Button
-                  variant="light"
-                  color="gray"
-                  size="xs"
-                  leftSection={<IconRefresh size={14} />}
-                  onClick={handleCheckUpdate}
-                  disabled={updateStatus.checking}
-                >
-                  Check for Updates
-                </Button>
-              )}
-              {updateStatus.available && !updateStatus.ready && (
-                <Button
-                  variant="light"
-                  color="gray"
-                  size="xs"
-                  leftSection={<IconDownload size={14} />}
-                  onClick={handleDownloadUpdate}
-                  disabled={updateStatus.downloading}
-                >
-                  Download Update
-                </Button>
-              )}
-              {updateStatus.ready && (
-                <Button
-                  color="gray"
-                  size="xs"
-                  leftSection={<IconRocket size={14} />}
-                  onClick={handleInstallUpdate}
-                >
-                  Install & Restart
-                </Button>
-              )}
-            </Group>
+            <Alert color="blue" variant="light" mb="sm">
+              Current version: 1.1.0. Check GitHub releases for updates.
+            </Alert>
+            <Button
+              component="a"
+              href="https://github.com/KeyurDesai53987/PlanMyBudget/releases"
+              target="_blank"
+              variant="light"
+              color="gray"
+              size="xs"
+              leftSection={<IconDownload size={14} />}
+            >
+              Download Latest Version
+            </Button>
           </Card>
         )}
 

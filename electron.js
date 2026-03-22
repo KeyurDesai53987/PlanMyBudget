@@ -214,11 +214,13 @@ let updateAvailable = false
 let updateVersion = ''
 
 function setupAutoUpdater() {
-  const { GitHubProvider } = require('electron-updater')
-  
   autoUpdater.logger = require('electron-log')
   autoUpdater.logger.transports.file.level = 'info'
   autoUpdater.autoDownload = false
+  
+  // Note: For private repos, auto-update requires GitHub token
+  // For now, we'll just log update status
+  autoUpdater.logger.info('Auto-updater initialized. Manual updates available at GitHub releases.')
   
   autoUpdater.setFeedURL({
     provider: 'github',
