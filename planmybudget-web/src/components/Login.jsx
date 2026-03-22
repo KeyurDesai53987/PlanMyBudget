@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { TextInput, PasswordInput, Button, Card, Text, Stack, Alert, useMantineColorScheme, Group, Divider } from '@mantine/core'
-import { IconWallet, IconMail, IconLock } from '@tabler/icons-react'
+import { TextInput, PasswordInput, Button, Card, Text, Stack, Alert, useMantineColorScheme, Group, Divider, Image } from '@mantine/core'
+import { IconMail, IconLock } from '@tabler/icons-react'
 import { login } from '../api'
 
 export default function Login({ onLogin }) {
@@ -38,7 +38,13 @@ export default function Login({ onLogin }) {
       <Card shadow="md" radius="lg" padding="xl" style={{ width: '100%', maxWidth: 380, background: isDark ? '#252525' : 'white' }}>
         <Stack gap="md">
           <div style={{ textAlign: 'center' }}>
-            <IconWallet size={48} stroke={1.5} style={{ marginBottom: 8, color: '#475569' }} />
+            <Image 
+              src="/logo.svg" 
+              w={80} 
+              h={80} 
+              style={{ margin: '0 auto 12px' }}
+              radius="xl"
+            />
             <Text size="xl" fw={700} style={{ fontSize: '1.75rem' }}>PlanMyBudget</Text>
             <Text size="sm" c="dimmed">
               Track your finances

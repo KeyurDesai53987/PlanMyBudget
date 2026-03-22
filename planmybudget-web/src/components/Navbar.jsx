@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Group, Button, Text, Box, ActionIcon, Drawer, Stack, useMantineColorScheme, Burger, Avatar, Menu, Divider } from '@mantine/core'
+import { Group, Button, Text, Box, ActionIcon, Drawer, Stack, useMantineColorScheme, Burger, Avatar, Menu, Divider, Image } from '@mantine/core'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
-import { IconWallet, IconLogout, IconMoon, IconSun, IconHome, IconBuildingBank, IconCreditCard, IconChartBar, IconTarget, IconRepeat, IconTag, IconSettings, IconUser, IconChevronDown } from '@tabler/icons-react'
+import { IconLogout, IconMoon, IconSun, IconHome, IconBuildingBank, IconCreditCard, IconChartBar, IconTarget, IconRepeat, IconTag, IconSettings, IconUser, IconChevronDown } from '@tabler/icons-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { colors } from '../theme'
@@ -113,7 +113,7 @@ export default function Navbar({ onLogout }) {
       >
         <Group justify="space-between" wrap="nowrap">
           <Group gap="xs" style={{ flexShrink: 0 }}>
-            <IconWallet size={24} stroke={1.5} />
+            <Image src="/logo.svg" w={28} h={28} radius="sm" />
             <Text fw={700} size="lg" style={{ whiteSpace: 'nowrap' }}>PlanMyBudget</Text>
           </Group>
           
@@ -164,7 +164,7 @@ export default function Navbar({ onLogout }) {
       <Drawer
         opened={opened}
         onClose={close}
-        title={<Group gap="xs"><IconWallet size={24} /> <Text fw={700}>PlanMyBudget</Text></Group>}
+        title={<Group gap="xs"><Image src="/logo.svg" w={28} h={28} radius="sm" /> <Text fw={700}>PlanMyBudget</Text></Group>}
         size="280px"
         padding="md"
       >
