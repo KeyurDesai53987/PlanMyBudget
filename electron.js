@@ -7,7 +7,6 @@ const { autoUpdater } = require('electron-updater')
 const isDev = !app.isPackaged
 
 let mainWindow
-let apiProcess
 let webServer
 
 function getBasePath() {
@@ -25,17 +24,17 @@ function startWebServer() {
   webApp.use(express.json())
   webApp.use(express.static(webPath))
   
-  // Proxy API requests to backend
+  // Proxy API requests to production backend
   webApp.use('/api', (req, res) => {
     const http = require('http')
     const options = {
-      hostname: 'localhost',
-      port: 4000,
+      hostname: 'saveit-r1gc.onrender.com',
+      port: 443,
       path: '/api' + req.path,
       method: req.method,
       headers: {
         ...req.headers,
-        host: 'localhost:4000'
+        host: 'saveit-r1gc.onrender.com'
       }
     }
     
@@ -44,6 +43,11 @@ function startWebServer() {
       proxyRes.on('data', chunk => data += chunk)
       proxyRes.on('end', () => {
         res.status(proxyRes.statusCode)
+        Object.keys(proxyRes.headers).forEach(key => {
+          if (key !== 'transfer-encoding') {
+            res.setHeader(key, proxyRes.headers[key])
+          }
+        })
         try {
           res.json(JSON.parse(data))
         } catch {
@@ -53,7 +57,7 @@ function startWebServer() {
     })
     
     proxyReq.on('error', () => {
-      res.status(500).json({ error: 'API error' })
+      res.status(500).json({ error: 'Unable to connect to server. Please check your internet connection.' })
     })
     
     if (req.body && Object.keys(req.body).length > 0) {
@@ -68,22 +72,6 @@ function startWebServer() {
   
   webServer = webApp.listen(5173, () => {
     console.log('Web server running on http://localhost:5173')
-  })
-}
-
-function startAPI() {
-  const basePath = getBasePath()
-  const apiPath = path.join(basePath, 'api')
-  
-  console.log('Starting API from:', apiPath)
-  
-  apiProcess = spawn('node', ['server.js'], {
-    cwd: apiPath,
-    stdio: 'inherit'
-  })
-  
-  apiProcess.on('error', (err) => {
-    console.error('Failed to start API:', err)
   })
 }
 
@@ -113,7 +101,6 @@ function createWindow() {
 
 app.whenReady().then(() => {
   startWebServer()
-  startAPI()
   createWindow()
   setupAutoUpdater()
   
@@ -131,7 +118,6 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
-  if (apiProcess) apiProcess.kill()
   if (webServer) webServer.close()
 })
 
