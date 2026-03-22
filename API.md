@@ -511,3 +511,264 @@ response = requests.get(
 )
 accounts = response.json()['accounts']
 ```
+
+---
+
+## iOS App Development (Swift)
+
+### Swift (URLSession)
+
+```swift
+let API_BASE = "https://saveit-r1gc.onrender.com/api"
+
+class APIManager {
+    static let shared = APIManager()
+    var token: String?
+    
+    func login(email: String, password: String) async throws -> String {
+        guard let url = URL(string: "\(API_BASE)/users/login") else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body = ["email": email, "password": password]
+        request.httpBody = try JSONEncoder().encode(body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw APIError.requestFailed
+        }
+        
+        let result = try JSONDecoder().decode(LoginResponse.self, from: data)
+        self.token = result.token
+        return result.token
+    }
+    
+    func getAccounts() async throws -> [Account] {
+        guard let url = URL(string: "\(API_BASE)/accounts") else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token ?? "")", forHTTPHeaderField: "Authorization")
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let response = try JSONDecoder().decode(AccountsResponse.self, from: data)
+        return response.accounts
+    }
+}
+
+// Models
+struct LoginResponse: Codable {
+    let token: String
+    let userId: String
+}
+
+struct Account: Codable {
+    let id: String
+    let name: String
+    let type: String
+    let balance: Double
+}
+
+struct AccountsResponse: Codable {
+    let accounts: [Account]
+}
+
+enum APIError: Error {
+    case invalidURL
+    case requestFailed
+}
+```
+
+### Swift (Alamofire)
+
+```swift
+import Alamofire
+
+let API_BASE = "https://saveit-r1gc.onrender.com/api"
+
+// Login
+AF.request(
+    "\(API_BASE)/users/login",
+    method: .post,
+    parameters: ["email": email, "password": password],
+    encoding: JSONEncoding.default
+).responseDecodable(of: LoginResponse.self) { response in
+    switch response.result {
+    case .success(let data):
+        print("Token: \(data.token)")
+    case .failure(let error):
+        print(error)
+    }
+}
+
+// Get Accounts
+AF.request(
+    "\(API_BASE)/accounts",
+    method: .get,
+    headers: ["Authorization": "Bearer \(token)"]
+).responseDecodable(of: AccountsResponse.self) { response in
+    if let accounts = response.value?.accounts {
+        print(accounts)
+    }
+}
+```
+
+### SwiftUI Example
+
+```swift
+import SwiftUI
+
+struct AccountsView: View {
+    @State private var accounts: [Account] = []
+    @State private var isLoading = true
+    
+    var body: some View {
+        NavigationView {
+            List(accounts) { account in
+                VStack(alignment: .leading) {
+                    Text(account.name)
+                        .font(.headline)
+                    Text("$\(account.balance, specifier: "%.2f")")
+                        .foregroundColor(.green)
+                }
+            }
+            .navigationTitle("Accounts")
+            .onAppear {
+                loadAccounts()
+            }
+        }
+    }
+    
+    func loadAccounts() {
+        Task {
+            do {
+                accounts = try await APIManager.shared.getAccounts()
+            } catch {
+                print("Error: \(error)")
+            }
+            isLoading = false
+        }
+    }
+}
+```
+
+---
+
+## React Native
+
+```javascript
+const API_BASE = 'https://saveit-r1gc.onrender.com/api';
+
+// Login with Axios
+const login = async (email, password) => {
+  try {
+    const response = await axios.post(`${API_BASE}/users/login`, {
+      email,
+      password
+    });
+    const { token } = response.data;
+    
+    // Store token
+    await AsyncStorage.setItem('token', token);
+    
+    return token;
+  } catch (error) {
+    console.error('Login failed:', error);
+    throw error;
+  }
+};
+
+// Get Accounts
+const getAccounts = async () => {
+  const token = await AsyncStorage.getItem('token');
+  
+  const response = await axios.get(`${API_BASE}/accounts`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  return response.data.accounts;
+};
+
+// Create Transaction
+const createTransaction = async (data) => {
+  const token = await AsyncStorage.getItem('token');
+  
+  const response = await axios.post(`${API_BASE}/transactions`, data, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  return response.data;
+};
+```
+
+---
+
+## Android (Kotlin)
+
+```kotlin
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+
+// Retrofit Interface
+interface PlanMyBudgetAPI {
+    @POST("users/login")
+    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
+    
+    @GET("accounts")
+    suspend fun getAccounts(@Header("Authorization") token: String): Response<AccountsResponse>
+    
+    @POST("transactions")
+    suspend fun createTransaction(
+        @Header("Authorization") token: String,
+        @Body transaction: Transaction
+    ): Response<TransactionResponse>
+}
+
+// Usage
+val api = Retrofit.Builder()
+    .baseUrl("https://saveit-r1gc.onrender.com/api/")
+    .addConverterFactory(GsonConverterFactory.create())
+    .build()
+    .create(PlanMyBudgetAPI::class.java)
+
+// Login
+val loginResponse = api.login(LoginRequest(email, password))
+val token = loginResponse.body()?.token
+
+// Get Accounts
+val accountsResponse = api.getAccounts("Bearer $token")
+val accounts = accountsResponse.body()?.accounts
+```
+
+---
+
+## Quick Reference
+
+| Feature | Endpoint | Method |
+|---------|----------|--------|
+| Login | `/users/login` | POST |
+| Get Accounts | `/accounts` | GET |
+| Create Account | `/accounts` | POST |
+| Get Transactions | `/transactions` | GET |
+| Create Transaction | `/transactions` | POST |
+| Update Transaction | `/transactions/:id` | PUT |
+| Delete Transaction | `/transactions/:id` | DELETE |
+| Get Budgets | `/budgets` | GET |
+| Create Budget | `/budgets` | POST |
+| Get Goals | `/goals` | GET |
+| Create Goal | `/goals` | POST |
+| Update Goal | `/goals/:id` | PUT |
+| Get Categories | `/categories` | GET |
+| Create Category | `/categories` | POST |

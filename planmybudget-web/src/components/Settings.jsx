@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Loader, Center, Avatar, Badge, Divider, Switch, useMantineColorScheme, SimpleGrid } from '@mantine/core'
-import { IconUser, IconLock, IconCheck, IconInfoCircle, IconPalette, IconCalendar, IconCurrencyDollar, IconLogout, IconTrendingUp, IconTarget, IconReceipt } from '@tabler/icons-react'
+import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Loader, Center, Avatar, Badge, Divider, Switch, useMantineColorScheme, SimpleGrid, Textarea, CopyButton, ActionIcon, Tooltip } from '@mantine/core'
+import { IconUser, IconLock, IconCheck, IconInfoCircle, IconPalette, IconCalendar, IconCurrencyDollar, IconLogout, IconTrendingUp, IconTarget, IconReceipt, IconKey, IconCopy, IconCheck as IconCheckFilled } from '@tabler/icons-react'
 import { api } from '../api'
 import { colors } from '../theme'
 
@@ -34,17 +34,21 @@ export default function Settings() {
   const [stats, setStats] = useState({ transactions: 0, accounts: 0, goals: 0, budgets: 0 })
   const [passwordData, setPasswordData] = useState({ current: '', new: '', confirm: '' })
   const [message, setMessage] = useState({ type: '', text: '' })
+  const [apiKeys, setApiKeys] = useState([])
+  const [newKeyName, setNewKeyName] = useState('')
+  const [generatedKey, setGeneratedKey] = useState(null)
 
   useEffect(() => { loadData() }, [])
 
   const loadData = async () => {
     try {
-      const [profileRes, accountsRes, transactionsRes, goalsRes, budgetsRes] = await Promise.all([
+      const [profileRes, accountsRes, transactionsRes, goalsRes, budgetsRes, keysRes] = await Promise.all([
         api('/profile'),
         api('/accounts'),
         api('/transactions'),
         api('/goals'),
-        api('/budgets')
+        api('/budgets'),
+        api('/api-keys')
       ])
       setProfile({
         email: profileRes.preferences?.email || '',
@@ -57,6 +61,7 @@ export default function Settings() {
         goals: goalsRes.goals?.length || 0,
         budgets: budgetsRes.budgets?.length || 0
       })
+      setApiKeys(keysRes.apiKeys || [])
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }
@@ -94,6 +99,32 @@ export default function Settings() {
       setMessage({ type: 'error', text: err.message || 'Failed to update password' })
     }
     finally { setSaving(false) }
+  }
+
+  const handleCreateApiKey = async (e) => {
+    e.preventDefault()
+    if (!newKeyName.trim()) return
+    setSaving(true)
+    try {
+      const res = await api('/api-keys', { method: 'POST', body: JSON.stringify({ name: newKeyName }) })
+      setGeneratedKey(res.apiKey)
+      setNewKeyName('')
+      const keysRes = await api('/api-keys')
+      setApiKeys(keysRes.apiKeys || [])
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Failed to create API key' })
+    }
+    setSaving(false)
+  }
+
+  const handleRevokeApiKey = async (id) => {
+    if (!confirm('Are you sure you want to revoke this API key?')) return
+    try {
+      await api(`/api-keys/${id}`, { method: 'DELETE' })
+      setApiKeys(apiKeys.filter(k => k.id !== id))
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Failed to revoke API key' })
+    }
   }
 
   const getInitials = (name) => {
@@ -220,6 +251,67 @@ export default function Settings() {
               />
             </Group>
           </Stack>
+        </Card>
+
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Group gap="sm" mb="md">
+            <IconKey size={20} />
+            <Text fw={600}>API Keys</Text>
+          </Group>
+          <Text size="xs" c="dimmed" mb="md">
+            Use API keys to access your data from other apps (iOS, Android, scripts).
+          </Text>
+          
+          {generatedKey && (
+            <Card padding="sm" radius="md" withBorder mb="md" style={{ background: isDark ? '#1e293b' : '#f8fafc' }}>
+              <Text size="xs" fw={500} mb="xs" c="green">API Key Created - Copy it now!</Text>
+              <Group justify="space-between">
+                <Text size="xs" style={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{generatedKey}</Text>
+                <CopyButton value={generatedKey}>
+                  {({ copied, copy }) => (
+                    <Tooltip label={copied ? 'Copied!' : 'Copy'}>
+                      <ActionIcon color={copied ? 'green' : 'gray'} onClick={copy}>
+                        {copied ? <IconCheckFilled size={16} /> : <IconCopy size={16} />}
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                </CopyButton>
+              </Group>
+              <Text size="xs" c="dimmed" mt="xs">This key will not be shown again.</Text>
+            </Card>
+          )}
+          
+          <form onSubmit={handleCreateApiKey}>
+            <Group gap="sm" mb="md">
+              <TextInput
+                placeholder="Key name (e.g., iOS App)"
+                value={newKeyName}
+                onChange={(e) => setNewKeyName(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <Button type="submit" color="gray" size="sm" loading={saving} disabled={!newKeyName.trim()}>
+                Generate
+              </Button>
+            </Group>
+          </form>
+          
+          {apiKeys.length > 0 ? (
+            <Stack gap="xs">
+              {apiKeys.map(key => (
+                <Group key={key.id} justify="space-between" p="sm" style={{ background: isDark ? '#252525' : '#f1f5f9', borderRadius: 8 }}>
+                  <div>
+                    <Text size="sm" fw={500}>{key.name}</Text>
+                    <Text size="xs" c="dimmed">{key.keyprefix}... • Created {new Date(key.createdat).toLocaleDateString()}</Text>
+                  </div>
+                  <Button variant="subtle" color="red" size="xs" onClick={() => handleRevokeApiKey(key.id)}>
+                    Revoke
+                  </Button>
+                </Group>
+              ))}
+            </Stack>
+          ) : (
+            <Text size="sm" c="dimmed" ta="center">No API keys yet</Text>
+          )}
         </Card>
 
         <Card shadow="sm" padding="lg" radius="md" withBorder>
