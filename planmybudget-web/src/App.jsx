@@ -44,7 +44,7 @@ function App() {
       {!isAuthenticated ? (
         <Routes>
           <Route path="/login" element={<Login onLogin={() => setIsAuthenticated(true)} />} />
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={<Landing onLogin={() => setIsAuthenticated(true)} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       ) : (

@@ -13,7 +13,7 @@ const features = [
   { icon: IconShield, title: 'Secure', desc: 'Bank-level security for your data', color: '#ef4444' },
 ]
 
-export default function Landing() {
+export default function Landing({ onLogin }) {
   const navigate = useNavigate()
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const isDark = colorScheme === 'dark'
@@ -22,6 +22,16 @@ export default function Landing() {
   useEffect(() => {
     setLoaded(true)
   }, [])
+
+  const handleDemoLogin = async () => {
+    try {
+      await loginAsDemo()
+      onLogin()
+    } catch (err) {
+      console.error('Demo login failed:', err)
+      alert('Demo login failed. Please try again.')
+    }
+  }
 
   return (
     <div style={{
@@ -99,16 +109,7 @@ export default function Landing() {
                 color="gray" 
                 mt="sm"
                 size="md"
-                onClick={async () => {
-                  try {
-                    await loginAsDemo()
-                    navigate('/')
-                    window.location.reload()
-                  } catch (err) {
-                    console.error('Demo login failed:', err)
-                    alert('Demo login failed. Please try again.')
-                  }
-                }}
+                onClick={handleDemoLogin}
                 style={{ borderRadius: 10 }}
               >
                 Open Demo
