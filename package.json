@@ -38,6 +38,7 @@
     },
     "files": [
       "electron.js",
+      "preload.js",
       "api/**/*",
       "planmybudget-web/dist/**/*",
       "package.json"
