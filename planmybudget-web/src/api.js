@@ -79,3 +79,7 @@ export async function googleAuth(credential) {
 export function logout() {
   clearToken()
 }
+
+export async function loginAsDemo() {
+  return login('demo@saveit.app', 'password')
+}

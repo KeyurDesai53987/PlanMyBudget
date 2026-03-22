@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Card, Text, Stack, Group, Button, SimpleGrid, Badge, Divider, useMantineColorScheme, Image, Container, ThemeIcon } from '@mantine/core'
 import { IconWallet, IconChartBar, IconTarget, IconCalendar, IconRefresh, IconShield, IconDownload, IconMoon, IconSun, IconCheck } from '@tabler/icons-react'
 import { useNavigate } from 'react-router-dom'
+import { loginAsDemo } from '../api'
 
 const features = [
   { icon: IconWallet, title: 'Multiple Accounts', desc: 'Track checking, savings, credit cards, and cash', color: '#3b82f6' },
@@ -98,10 +99,15 @@ export default function Landing() {
                 color="gray" 
                 mt="sm"
                 size="md"
-                onClick={() => {
-                  localStorage.setItem('token', 'demo-token')
-                  navigate('/')
-                  window.location.reload()
+                onClick={async () => {
+                  try {
+                    await loginAsDemo()
+                    navigate('/')
+                    window.location.reload()
+                  } catch (err) {
+                    console.error('Demo login failed:', err)
+                    alert('Demo login failed. Please try again.')
+                  }
                 }}
                 style={{ borderRadius: 10 }}
               >
