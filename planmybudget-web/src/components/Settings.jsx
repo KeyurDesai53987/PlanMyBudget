@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Loader, Center, Avatar, Badge, Divider, Switch, useMantineColorScheme, SimpleGrid, Textarea, CopyButton, ActionIcon, Tooltip } from '@mantine/core'
+import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Avatar, Badge, Divider, Switch, useMantineColorScheme, SimpleGrid, Textarea, CopyButton, ActionIcon, Tooltip } from '@mantine/core'
 import { IconUser, IconLock, IconCheck, IconInfoCircle, IconPalette, IconCalendar, IconCurrencyDollar, IconLogout, IconTrendingUp, IconTarget, IconReceipt, IconKey, IconCopy, IconCheck as IconCheckFilled } from '@tabler/icons-react'
 import { api } from '../api'
 import { colors } from '../theme'
+import { SettingsSkeleton } from './Skeletons'
 
 function StatItem({ icon: Icon, label, value, color }) {
   return (
@@ -132,7 +133,7 @@ export default function Settings() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }
 
-  if (loading) return <Center h={400}><Loader color="gray" /></Center>
+  if (loading) return <SettingsSkeleton />
 
   return (
     <div style={{ maxWidth: 700, margin: '0 auto' }}>

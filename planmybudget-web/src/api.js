@@ -42,10 +42,10 @@ export async function login(email, password) {
   return resp
 }
 
-export async function register(email, password) {
+export async function register(email, password, name = '') {
   const resp = await api('/users/register', {
     method: 'POST',
-    body: JSON.stringify({ email, password })
+    body: JSON.stringify({ email, password, name })
   })
   return resp
 }

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Card, Group, Text, Stack, TextInput, NumberInput, Button, Progress, ActionIcon, SimpleGrid, Badge, Loader, Center, Modal } from '@mantine/core'
+import { Card, Group, Text, Stack, TextInput, NumberInput, Button, Progress, ActionIcon, SimpleGrid, Badge, Modal } from '@mantine/core'
 import { IconPlus, IconTrash, IconTarget } from '@tabler/icons-react'
 import { api } from '../api'
+import { GoalsSkeleton } from './Skeletons'
 
 export default function Goals() {
   const [goals, setGoals] = useState([])
@@ -64,11 +65,7 @@ export default function Goals() {
     setCustomAmount('')
   }
 
-  if (loading) return (
-    <Center h={400}>
-      <Loader color="gray" />
-    </Center>
-  )
+  if (loading) return <GoalsSkeleton />
 
   return (
     <div>

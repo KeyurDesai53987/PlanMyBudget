@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Card, Group, Text, Stack, TextInput, NumberInput, Button, SimpleGrid, ActionIcon, Loader, Center, Modal, useMantineColorScheme } from '@mantine/core'
+import { Card, Group, Text, Stack, TextInput, NumberInput, Button, SimpleGrid, ActionIcon, Modal, useMantineColorScheme } from '@mantine/core'
 import { IconPlus, IconTrash, IconBuildingBank, IconCash, IconCreditCard, IconChartLine, IconEdit } from '@tabler/icons-react'
 import { api } from '../api'
 import { colors } from '../theme'
+import { AccountsSkeleton } from './Skeletons'
 
 const ACCOUNT_TYPES = [
   { id: 'checking', icon: IconBuildingBank, label: 'Checking', color: colors.primary },
@@ -75,11 +76,7 @@ export default function Accounts() {
 
   const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0)
 
-  if (loading) return (
-    <Center h={400}>
-      <Loader color="gray" />
-    </Center>
-  )
+  if (loading) return <AccountsSkeleton />
 
   return (
     <div>

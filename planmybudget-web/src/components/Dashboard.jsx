@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Card, Group, Text, Stack, SimpleGrid, Loader, Center, useMantineColorScheme } from '@mantine/core'
+import { Card, Group, Text, Stack, SimpleGrid, useMantineColorScheme } from '@mantine/core'
 import { IconArrowUpRight, IconArrowDownRight, IconWallet, IconTarget } from '@tabler/icons-react'
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { api } from '../api'
 import { colors } from '../theme'
+import { DashboardSkeleton } from './Skeletons'
 
 const CHART_COLORS = [colors.primary, colors.success, colors.danger, colors.warning, colors.purple, colors.cyan, '#14b8a6', '#f59e0b']
 
@@ -134,11 +135,7 @@ export default function Dashboard() {
     savings: d.income - d.expenses
   })).filter(d => d.savings !== 0)
 
-  if (loading) return (
-    <Center h={400}>
-      <Loader color="gray" />
-    </Center>
-  )
+  if (loading) return <DashboardSkeleton />
 
   return (
     <div>

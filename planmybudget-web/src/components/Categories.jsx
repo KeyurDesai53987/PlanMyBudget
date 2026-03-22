@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Card, Group, Text, Stack, TextInput, Button, SimpleGrid, ActionIcon, Loader, Center, Modal } from '@mantine/core'
+import { Card, Group, Text, Stack, TextInput, Button, SimpleGrid, ActionIcon, Modal } from '@mantine/core'
 import { IconPlus, IconTrash, IconTag, IconEdit } from '@tabler/icons-react'
 import { api } from '../api'
 import { colors } from '../theme'
+import { CategoriesSkeleton } from './Skeletons'
 
 const DEFAULT_COLORS = [colors.primary, colors.success, colors.danger, colors.purple, colors.warning, colors.cyan, colors.pink, colors.indigo]
 
@@ -63,11 +64,7 @@ export default function Categories() {
     } catch (err) { alert(err.message) }
   }
 
-  if (loading) return (
-    <Center h={400}>
-      <Loader color="gray" />
-    </Center>
-  )
+  if (loading) return <CategoriesSkeleton />
 
   return (
     <div>

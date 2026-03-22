@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, ActionIcon, SimpleGrid, Loader, Center, Modal, Badge, Switch, SegmentedControl } from '@mantine/core'
+import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, ActionIcon, SimpleGrid, Modal, Badge, Switch, SegmentedControl } from '@mantine/core'
 import { IconPlus, IconTrash, IconRepeat, IconPlayerPlay, IconEdit } from '@tabler/icons-react'
 import { api } from '../api'
+import { RecurringSkeleton } from './Skeletons'
 
 const frequencies = [
   { value: 'daily', label: 'Daily' },
@@ -113,11 +114,7 @@ export default function Recurring() {
     return `Due in ${diff} days`
   }
 
-  if (loading) return (
-    <Center h={400}>
-      <Loader color="gray" />
-    </Center>
-  )
+  if (loading) return <RecurringSkeleton />
 
   return (
     <div>

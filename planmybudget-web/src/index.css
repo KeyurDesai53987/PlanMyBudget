@@ -87,3 +87,61 @@ body {
 [data-mantine-color-scheme="dark"] .main-content {
   background: #1a1a1a;
 }
+
+/* Improved card layouts on mobile */
+@media (max-width: 480px) {
+  .mantine-Card-root {
+    padding: 12px !important;
+  }
+  
+  /* Better table/list scroll on mobile */
+  .mantine-Table-root {
+    font-size: 14px;
+  }
+  
+  /* Scrollable containers */
+  .scroll-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Modal full screen on mobile */
+  .mantine-Modal-content {
+    max-height: 100vh;
+  }
+  
+  /* Better form spacing on mobile */
+  .mantine-Stack-root {
+    gap: 12px !important;
+  }
+}
+
+/* Smooth transitions */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Better scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Focus visible styles for accessibility */
+:focus-visible {
+  outline: 2px solid #475569;
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  .mantine-Burger-root,
+  nav,
+  button {
+    display: none !important;
+  }
+  
+  .main-content {
+    padding: 0;
+    max-width: none;
+  }
+}

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, SegmentedControl, ActionIcon, Loader, Center, Modal, Menu, Badge, Divider } from '@mantine/core'
+import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, SegmentedControl, ActionIcon, Modal, Menu, Badge, Divider } from '@mantine/core'
 import { IconPlus, IconTrash, IconArrowUpRight, IconArrowDownRight, IconEdit, IconDownload, IconRepeat, IconPlayerPlay, IconTag, IconSearch } from '@tabler/icons-react'
 import { api } from '../api'
 import { useMantineColorScheme } from '@mantine/core'
 import { colors } from '../theme'
 import { formatCurrency } from '../currencies'
+import { TransactionsSkeleton } from './Skeletons'
 
 const DATE_PRESETS = [
   { label: 'All', value: 'all' },
@@ -274,11 +275,7 @@ export default function Transactions() {
 
   useEffect(() => { setCurrentPage(1) }, [datePreset, customDateRange, pageSize])
 
-  if (loading) return (
-    <Center h={400}>
-      <Loader color="gray" />
-    </Center>
-  )
+  if (loading) return <TransactionsSkeleton />
 
   return (
     <div>

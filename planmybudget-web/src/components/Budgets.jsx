@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, ActionIcon, SimpleGrid, Loader, Center, Modal, Progress, Collapse, Badge, useMantineColorScheme } from '@mantine/core'
+import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, ActionIcon, SimpleGrid, Modal, Progress, Collapse, Badge, useMantineColorScheme } from '@mantine/core'
 import { IconPlus, IconTrash, IconCalendar, IconEdit, IconAlertTriangle, IconChevronDown, IconChevronUp, IconArrowDownRight, IconRefresh } from '@tabler/icons-react'
 import { api } from '../api'
 import { colors } from '../theme'
+import { BudgetsSkeleton } from './Skeletons'
 
 const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -173,11 +174,7 @@ export default function Budgets() {
     } catch (err) { alert(err.message) }
   }
 
-  if (loading) return (
-    <Center h={400}>
-      <Loader color="gray" />
-    </Center>
-  )
+  if (loading) return <BudgetsSkeleton />
 
   return (
     <div>
