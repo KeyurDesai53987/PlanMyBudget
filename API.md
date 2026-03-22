@@ -822,3 +822,50 @@ SELECT * FROM goals;   -- Should only return your goals
 - RLS policies are additive to API-level authorization
 - The `users` table does not have RLS (users manage their own profile via API)
 - The `sessions` table does not have RLS (tokens are validated by the API)
+
+---
+
+## Scalability (Upstash Redis)
+
+For production scalability, enable Upstash Redis for rate limiting and session storage.
+
+### Why Redis?
+
+- **Rate limiting** works across multiple server instances
+- **OTP storage** persists across server restarts
+- **Free tier** available (10K commands/day)
+
+### Setup Instructions
+
+1. **Create Upstash Redis Database**
+   - Go to [console.upstash.com](https://console.upstash.com/redis)
+   - Click **Create Database**
+   - Choose **Serverless** plan (free)
+   - Select a region close to your server
+   - Copy the **REST URL** and **REST Token**
+
+2. **Add Environment Variables**
+
+   ```
+   UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+   UPSTASH_REDIS_REST_TOKEN=your-upstash-token
+   ```
+
+3. **Deploy**
+
+   Redis will automatically connect when environment variables are set. If not configured, the app falls back to in-memory storage.
+
+### Rate Limits with Redis
+
+| Action | Limit |
+|--------|-------|
+| Login attempts | 5 per 15 minutes |
+| OTP requests | 5 per 15 minutes |
+| OTP verification | 3 attempts per code |
+
+### Monitoring
+
+View Redis usage in the Upstash dashboard:
+- Command usage
+- Memory consumption
+- Active connections

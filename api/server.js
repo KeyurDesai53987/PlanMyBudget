@@ -17,13 +17,52 @@ app.use(cors({
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// Rate limiting
-const rateLimitStore = new Map()
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000 // 15 minutes
+// Upstash Redis for rate limiting and OTP storage
+let redis = null
+let ratelimit = null
+
+async function initRedis() {
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    try {
+      const { Redis } = require('@upstash/redis')
+      const { Ratelimit } = require('@upstash/ratelimit')
+      
+      redis = new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      })
+      
+      ratelimit = new Ratelimit({
+        redis: redis,
+        limiter: Ratelimit.slidingWindow(5, '15 m'),
+        analytics: false,
+        prefix: 'ratelimit:',
+      })
+      
+      console.log('Upstash Redis connected')
+    } catch (err) {
+      console.log('Redis init failed, falling back to in-memory:', err.message)
+    }
+  } else {
+    console.log('Upstash Redis not configured (set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN)')
+  }
+}
+
+initRedis()
+
 const MAX_LOGIN_ATTEMPTS = 5
 const MAX_OTP_ATTEMPTS = 3
 
-function rateLimit(key, maxAttempts) {
+async function checkRateLimit(key, maxAttempts) {
+  if (ratelimit) {
+    const result = await ratelimit.limit(key)
+    return {
+      allowed: result.success,
+      remaining: result.remaining,
+      retryAfter: result.success ? 0 : Math.ceil((result.reset - Date.now()) / 1000)
+    }
+  }
+  
   const now = Date.now()
   const record = rateLimitStore.get(key)
   
@@ -39,6 +78,9 @@ function rateLimit(key, maxAttempts) {
   record.attempts++
   return { allowed: true, remaining: maxAttempts - record.attempts }
 }
+
+const rateLimitStore = new Map()
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000
 
 // Secure token generator
 function generateToken() {
@@ -57,8 +99,32 @@ const transporter = nodemailer.createTransport({
 // Google OAuth client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
-// OTP store (in production, use Redis or database)
-const otpStore = new Map()
+// OTP store (Redis when available, fallback to in-memory)
+async function setOTP(email, otp, attempts = 0) {
+  if (redis) {
+    await redis.set(`otp:${email}`, JSON.stringify({ otp, attempts, created: Date.now() }), { ex: 600 })
+  } else {
+    otpStoreInMemory.set(email, { otp, attempts, created: Date.now() })
+  }
+}
+
+async function getOTP(email) {
+  if (redis) {
+    const data = await redis.get(`otp:${email}`)
+    return data ? JSON.parse(data) : null
+  }
+  return otpStoreInMemory.get(email) || null
+}
+
+async function deleteOTP(email) {
+  if (redis) {
+    await redis.del(`otp:${email}`)
+  } else {
+    otpStoreInMemory.delete(email)
+  }
+}
+
+const otpStoreInMemory = new Map()
 
 // Generate 6-digit OTP
 function generateOTP() {
@@ -372,7 +438,7 @@ app.post('/api/users/login', async (req, res) => {
   // Rate limiting
   const ip = req.ip || req.connection.remoteAddress
   const loginKey = `login:${ip}:${email.toLowerCase()}`
-  const loginLimit = rateLimit(loginKey, MAX_LOGIN_ATTEMPTS)
+  const loginLimit = await checkRateLimit(loginKey, MAX_LOGIN_ATTEMPTS)
   
   if (!loginLimit.allowed) {
     return res.status(429).json({ 
@@ -411,7 +477,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
   // Rate limiting for OTP requests
   const ip = req.ip || req.connection.remoteAddress
   const otpKey = `otp:${ip}`
-  const otpLimit = rateLimit(otpKey, 5) // 5 OTP requests per 15 minutes
+  const otpLimit = await checkRateLimit(otpKey, 5) // 5 OTP requests per 15 minutes
   
   if (!otpLimit.allowed) {
     return res.status(429).json({ 
@@ -426,7 +492,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
   const otp = generateOTP()
   const expiresAt = Date.now() + 10 * 60 * 1000 // 10 minutes
   
-  otpStore.set(email.toLowerCase(), { otp, expiresAt, attempts: 0 })
+  await setOTP(email.toLowerCase(), { otp, expiresAt, attempts: 0 })
   
   const sent = await sendOTPEmail(email, otp)
   
@@ -445,26 +511,27 @@ app.post('/api/auth/verify-otp', async (req, res) => {
   // Password strength validation
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' })
   
-  const stored = otpStore.get(email.toLowerCase())
+  const stored = await getOTP(email.toLowerCase())
   if (!stored) return res.status(400).json({ error: 'No OTP requested for this email' })
   
   // Check OTP attempts
   if (stored.attempts >= MAX_OTP_ATTEMPTS) {
-    otpStore.delete(email.toLowerCase())
+    await deleteOTP(email.toLowerCase())
     return res.status(400).json({ error: 'Too many attempts. Request a new OTP.' })
   }
   
   if (Date.now() > stored.expiresAt) {
-    otpStore.delete(email.toLowerCase())
+    await deleteOTP(email.toLowerCase())
     return res.status(400).json({ error: 'OTP expired. Request a new one.' })
   }
   
   if (stored.otp !== otp) {
     stored.attempts++
+    await setOTP(email.toLowerCase(), stored)
     return res.status(400).json({ error: 'Invalid OTP' })
   }
   
-  otpStore.delete(email.toLowerCase())
+  await deleteOTP(email.toLowerCase())
   
   const user = {
     id: uuidv4(),
