@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { getToken, logout } from './api'
 import Login from './components/Login'
+import Landing from './components/Landing'
 import Dashboard from './components/Dashboard'
 import Accounts from './components/Accounts'
 import Transactions from './components/Transactions'
@@ -41,7 +42,11 @@ function App() {
   return (
     <div className="app">
       {!isAuthenticated ? (
-        <Login onLogin={() => setIsAuthenticated(true)} />
+        <Routes>
+          <Route path="/login" element={<Login onLogin={() => setIsAuthenticated(true)} />} />
+          <Route path="/" element={<Landing />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       ) : (
         <>
           <Navbar onLogout={handleLogout} />

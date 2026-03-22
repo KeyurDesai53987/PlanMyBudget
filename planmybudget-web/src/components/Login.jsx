@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
-import { TextInput, PasswordInput, Button, Card, Text, Stack, Alert, useMantineColorScheme, Group, Checkbox, Progress, Center, Image } from '@mantine/core'
+import { TextInput, PasswordInput, Button, Card, Text, Stack, Alert, useMantineColorScheme, Group, Checkbox, Progress, Center, Image, Anchor } from '@mantine/core'
 import { IconMail, IconLock, IconUser, IconArrowLeft } from '@tabler/icons-react'
 import { login, register } from '../api'
+import { useNavigate } from 'react-router-dom'
 
 function getPasswordStrength(password) {
   if (!password) return { score: 0, label: '', color: 'gray' }
@@ -24,6 +25,7 @@ function getPasswordStrength(password) {
 export default function Login({ onLogin }) {
   const { colorScheme } = useMantineColorScheme()
   const isDark = colorScheme === 'dark'
+  const navigate = useNavigate()
   const [isRegister, setIsRegister] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -254,6 +256,10 @@ export default function Login({ onLogin }) {
               Demo: demo@saveit.app / password
             </Text>
           )}
+          
+          <Anchor component="button" type="button" size="xs" ta="center" onClick={() => navigate('/')} c="dimmed">
+            ← Back to Home
+          </Anchor>
         </Stack>
       </Card>
     </div>
