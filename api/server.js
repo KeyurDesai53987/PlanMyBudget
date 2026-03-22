@@ -1,6 +1,7 @@
 const express = require('express')
 const cors = require('cors')
 const path = require('path')
+const crypto = require('crypto')
 const { v4: uuidv4 } = require('uuid')
 const { Pool } = require('pg')
 const nodemailer = require('nodemailer')
@@ -10,9 +11,39 @@ const { OAuth2Client } = require('google-auth-library')
 const app = express()
 const PORT = process.env.PORT || 4000
 
-app.use(cors())
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'https://planmybudget.vercel.app']
+}))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+// Rate limiting
+const rateLimitStore = new Map()
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000 // 15 minutes
+const MAX_LOGIN_ATTEMPTS = 5
+const MAX_OTP_ATTEMPTS = 3
+
+function rateLimit(key, maxAttempts) {
+  const now = Date.now()
+  const record = rateLimitStore.get(key)
+  
+  if (!record || now > record.windowEnd) {
+    rateLimitStore.set(key, { attempts: 1, windowEnd: now + RATE_LIMIT_WINDOW })
+    return { allowed: true, remaining: maxAttempts - 1 }
+  }
+  
+  if (record.attempts >= maxAttempts) {
+    return { allowed: false, remaining: 0, retryAfter: Math.ceil((record.windowEnd - now) / 1000) }
+  }
+  
+  record.attempts++
+  return { allowed: true, remaining: maxAttempts - record.attempts }
+}
+
+// Secure token generator
+function generateToken() {
+  return crypto.randomBytes(32).toString('hex')
+}
 
 // Email transporter (configure your SMTP in environment variables)
 const transporter = nodemailer.createTransport({
@@ -165,11 +196,19 @@ async function initDb() {
   await db.run(`
     CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY,
-      userId TEXT NOT NULL,
+      userid TEXT NOT NULL,
       createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (userId) REFERENCES users(id)
+      expiresat TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL '30 days'),
+      FOREIGN KEY (userid) REFERENCES users(id)
     )
   `)
+  
+  // Add expiresat column if it doesn't exist (for existing tables)
+  try {
+    await db.run('ALTER TABLE sessions ADD COLUMN IF NOT EXISTS expiresat TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL \'30 days\')')
+  } catch (e) {
+    // Column may already exist
+  }
 
   await db.run(`
     CREATE TABLE IF NOT EXISTS recurring (
@@ -245,8 +284,10 @@ async function auth(req, res, next) {
   const header = req.headers['authorization'] || ''
   if (!header) return res.status(401).json({ error: 'Unauthorized' })
   const token = header.replace('Bearer ', '').trim()
-  const session = await db.get('SELECT * FROM sessions WHERE token = $1', [token])
-  if (!session) return res.status(401).json({ error: 'Invalid token' })
+  
+  const session = await db.get('SELECT * FROM sessions WHERE token = $1 AND (expiresat IS NULL OR expiresat > NOW())', [token])
+  if (!session) return res.status(401).json({ error: 'Session expired or invalid' })
+  
   req.userid = session.userid
   next()
 }
@@ -260,6 +301,13 @@ app.get('/api/status', (req, res) => res.json({ status: 'ok' }))
 app.post('/api/users/register', async (req, res) => {
   const { email, password } = req.body || {}
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' })
+  
+  // Email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) return res.status(400).json({ error: 'Invalid email format' })
+  
+  // Password strength validation
+  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' })
   
   const exists = await db.get('SELECT * FROM users WHERE LOWER(email) = $1', [email.toLowerCase()])
   if (exists) return res.status(400).json({ error: 'User already exists' })
@@ -286,14 +334,38 @@ app.post('/api/users/login', async (req, res) => {
   const { email, password } = req.body || {}
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' })
   
+  // Rate limiting
+  const ip = req.ip || req.connection.remoteAddress
+  const loginKey = `login:${ip}:${email.toLowerCase()}`
+  const loginLimit = rateLimit(loginKey, MAX_LOGIN_ATTEMPTS)
+  
+  if (!loginLimit.allowed) {
+    return res.status(429).json({ 
+      error: 'Too many login attempts. Please try again later.',
+      retryAfter: loginLimit.retryAfter
+    })
+  }
+  
   const user = await db.get('SELECT * FROM users WHERE LOWER(email) = $1', [email.toLowerCase()])
   if (!user) return res.status(401).json({ error: 'Invalid credentials' })
   if (!verifyPassword(password, user.passwordhash)) return res.status(401).json({ error: 'Invalid credentials' })
   
-  const token = 'token-' + uuidv4()
-  await db.run('INSERT INTO sessions (token, userId) VALUES ($1, $2)', [token, user.id])
+  const token = generateToken()
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+  await db.run('INSERT INTO sessions (token, userid, expiresat) VALUES ($1, $2, $3)', [token, user.id, expiresAt])
   
   res.json({ token, userId: user.id })
+})
+
+// Logout
+app.post('/api/logout', async (req, res) => {
+  const header = req.headers['authorization'] || ''
+  if (!header) return res.status(401).json({ error: 'Unauthorized' })
+  
+  const token = header.replace('Bearer ', '').trim()
+  await db.run('DELETE FROM sessions WHERE token = $1', [token])
+  
+  res.json({ success: true })
 })
 
 // Send OTP
@@ -301,13 +373,25 @@ app.post('/api/auth/send-otp', async (req, res) => {
   const { email } = req.body || {}
   if (!email) return res.status(400).json({ error: 'Email required' })
   
+  // Rate limiting for OTP requests
+  const ip = req.ip || req.connection.remoteAddress
+  const otpKey = `otp:${ip}`
+  const otpLimit = rateLimit(otpKey, 5) // 5 OTP requests per 15 minutes
+  
+  if (!otpLimit.allowed) {
+    return res.status(429).json({ 
+      error: 'Too many OTP requests. Please try again later.',
+      retryAfter: otpLimit.retryAfter
+    })
+  }
+  
   const user = await db.get('SELECT * FROM users WHERE LOWER(email) = $1', [email.toLowerCase()])
   if (user) return res.status(400).json({ error: 'User already exists' })
   
   const otp = generateOTP()
   const expiresAt = Date.now() + 10 * 60 * 1000 // 10 minutes
   
-  otpStore.set(email.toLowerCase(), { otp, expiresAt })
+  otpStore.set(email.toLowerCase(), { otp, expiresAt, attempts: 0 })
   
   const sent = await sendOTPEmail(email, otp)
   
@@ -323,13 +407,27 @@ app.post('/api/auth/verify-otp', async (req, res) => {
   const { email, otp, password, name } = req.body || {}
   if (!email || !otp || !password) return res.status(400).json({ error: 'Email, OTP and password required' })
   
+  // Password strength validation
+  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' })
+  
   const stored = otpStore.get(email.toLowerCase())
   if (!stored) return res.status(400).json({ error: 'No OTP requested for this email' })
+  
+  // Check OTP attempts
+  if (stored.attempts >= MAX_OTP_ATTEMPTS) {
+    otpStore.delete(email.toLowerCase())
+    return res.status(400).json({ error: 'Too many attempts. Request a new OTP.' })
+  }
+  
   if (Date.now() > stored.expiresAt) {
     otpStore.delete(email.toLowerCase())
-    return res.status(400).json({ error: 'OTP expired' })
+    return res.status(400).json({ error: 'OTP expired. Request a new one.' })
   }
-  if (stored.otp !== otp) return res.status(400).json({ error: 'Invalid OTP' })
+  
+  if (stored.otp !== otp) {
+    stored.attempts++
+    return res.status(400).json({ error: 'Invalid OTP' })
+  }
   
   otpStore.delete(email.toLowerCase())
   
@@ -348,8 +446,9 @@ app.post('/api/auth/verify-otp', async (req, res) => {
     VALUES ($1, $2, $3, $4, $5, $6, $7)
   `, [user.id, user.email, user.passwordhash, user.name, user.preferredCurrency, user.locale, user.createdat])
   
-  const token = 'token-' + uuidv4()
-  await db.run('INSERT INTO sessions (token, userId) VALUES ($1, $2)', [token, user.id])
+  const token = generateToken()
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+  await db.run('INSERT INTO sessions (token, userid, expiresat) VALUES ($1, $2, $3)', [token, user.id, expiresAt])
   
   res.json({ token, userId: user.id })
 })
@@ -378,7 +477,8 @@ app.post('/api/auth/google', async (req, res) => {
       user = await db.get('SELECT * FROM users WHERE id = $1', [userId])
     }
     
-    const token = 'token-' + uuidv4()
+    const token = generateToken()
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     await db.run('INSERT INTO sessions (token, userId) VALUES ($1, $2)', [token, user.id])
     
     res.json({ token, userId: user.id })
@@ -635,11 +735,16 @@ app.post('/api/transactions', auth, async (req, res) => {
 
 app.put('/api/transactions/:id', auth, async (req, res) => {
   const { id } = req.params
-  const txn = await db.get('SELECT * FROM transactions WHERE id = $1', [id])
+  
+  // Verify ownership - transaction must belong to user's account
+  const txn = await db.get(`
+    SELECT t.* FROM transactions t 
+    JOIN accounts a ON t.accountid = a.id 
+    WHERE t.id = $1 AND a.userid = $2
+  `, [id, req.userid])
   if (!txn) return res.status(404).json({ error: 'Transaction not found' })
   
   const account = await db.get('SELECT * FROM accounts WHERE id = $1 AND userid = $2', [txn.accountid, req.userid])
-  if (!account) return res.status(400).json({ error: 'Account not found' })
   
   const oldAmount = txn.amount
   const { accountid, date, amount, type, categoryId, description } = req.body || {}
@@ -670,7 +775,13 @@ app.put('/api/transactions/:id', auth, async (req, res) => {
 
 app.delete('/api/transactions/:id', auth, async (req, res) => {
   const { id } = req.params
-  const txn = await db.get('SELECT * FROM transactions WHERE id = $1', [id])
+  
+  // Verify ownership - transaction must belong to user's account
+  const txn = await db.get(`
+    SELECT t.* FROM transactions t 
+    JOIN accounts a ON t.accountid = a.id 
+    WHERE t.id = $1 AND a.userid = $2
+  `, [id, req.userid])
   if (!txn) return res.status(404).json({ error: 'Transaction not found' })
   
   const account = await db.get('SELECT * FROM accounts WHERE id = $1 AND userid = $2', [txn.accountid, req.userid])
