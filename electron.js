@@ -28,43 +28,40 @@ function startWebServer() {
   webApp.use('/api', (req, res) => {
     const https = require('https')
     
-    let body = ''
-    req.on('data', chunk => body += chunk)
-    req.on('end', () => {
-      const options = {
-        hostname: 'saveit-r1gc.onrender.com',
-        path: '/api' + req.path,
-        method: req.method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(body),
-          host: 'saveit-r1gc.onrender.com'
+    const body = req.body ? JSON.stringify(req.body) : ''
+    const options = {
+      hostname: 'saveit-r1gc.onrender.com',
+      path: '/api' + req.path,
+      method: req.method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+        host: 'saveit-r1gc.onrender.com'
+      }
+    }
+    
+    const proxyReq = https.request(options, (proxyRes) => {
+      let data = ''
+      proxyRes.on('data', chunk => data += chunk)
+      proxyRes.on('end', () => {
+        res.status(proxyRes.statusCode)
+        try {
+          res.json(JSON.parse(data))
+        } catch {
+          res.send(data)
         }
-      }
-      
-      const proxyReq = https.request(options, (proxyRes) => {
-        let data = ''
-        proxyRes.on('data', chunk => data += chunk)
-        proxyRes.on('end', () => {
-          res.status(proxyRes.statusCode)
-          try {
-            res.json(JSON.parse(data))
-          } catch {
-            res.send(data)
-          }
-        })
       })
-      
-      proxyReq.on('error', (err) => {
-        console.error('Proxy error:', err)
-        res.status(500).json({ error: 'Unable to connect to server. Please check your internet connection.' })
-      })
-      
-      if (body) {
-        proxyReq.write(body)
-      }
-      proxyReq.end()
     })
+    
+    proxyReq.on('error', (err) => {
+      console.error('Proxy error:', err)
+      res.status(500).json({ error: 'Unable to connect to server. Please check your internet connection.' })
+    })
+    
+    if (body) {
+      proxyReq.write(body)
+    }
+    proxyReq.end()
   })
   
   webApp.get('*', (req, res) => {
