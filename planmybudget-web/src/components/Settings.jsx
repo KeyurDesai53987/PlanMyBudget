@@ -254,66 +254,16 @@ export default function Settings() {
           </Stack>
         </Card>
 
+        {/* API Keys section hidden temporarily */}
+        {/* 
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Group gap="sm" mb="md">
             <IconKey size={20} />
             <Text fw={600}>API Keys</Text>
           </Group>
-          <Text size="xs" c="dimmed" mb="md">
-            Use API keys to access your data from other apps (iOS, Android, scripts).
-          </Text>
-          
-          {generatedKey && (
-            <Card padding="sm" radius="md" withBorder mb="md" style={{ background: isDark ? '#1e293b' : '#f8fafc' }}>
-              <Text size="xs" fw={500} mb="xs" c="green">API Key Created - Copy it now!</Text>
-              <Group justify="space-between">
-                <Text size="xs" style={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{generatedKey}</Text>
-                <CopyButton value={generatedKey}>
-                  {({ copied, copy }) => (
-                    <Tooltip label={copied ? 'Copied!' : 'Copy'}>
-                      <ActionIcon color={copied ? 'green' : 'gray'} onClick={copy}>
-                        {copied ? <IconCheckFilled size={16} /> : <IconCopy size={16} />}
-                      </ActionIcon>
-                    </Tooltip>
-                  )}
-                </CopyButton>
-              </Group>
-              <Text size="xs" c="dimmed" mt="xs">This key will not be shown again.</Text>
-            </Card>
-          )}
-          
-          <form onSubmit={handleCreateApiKey}>
-            <Group gap="sm" mb="md">
-              <TextInput
-                placeholder="Key name (e.g., iOS App)"
-                value={newKeyName}
-                onChange={(e) => setNewKeyName(e.target.value)}
-                style={{ flex: 1 }}
-              />
-              <Button type="submit" color="gray" size="sm" loading={saving} disabled={!newKeyName.trim()}>
-                Generate
-              </Button>
-            </Group>
-          </form>
-          
-          {apiKeys.length > 0 ? (
-            <Stack gap="xs">
-              {apiKeys.map(key => (
-                <Group key={key.id} justify="space-between" p="sm" style={{ background: isDark ? '#252525' : '#f1f5f9', borderRadius: 8 }}>
-                  <div>
-                    <Text size="sm" fw={500}>{key.name}</Text>
-                    <Text size="xs" c="dimmed">{key.keyprefix}... • Created {new Date(key.createdat).toLocaleDateString()}</Text>
-                  </div>
-                  <Button variant="subtle" color="red" size="xs" onClick={() => handleRevokeApiKey(key.id)}>
-                    Revoke
-                  </Button>
-                </Group>
-              ))}
-            </Stack>
-          ) : (
-            <Text size="sm" c="dimmed" ta="center">No API keys yet</Text>
-          )}
+          ...
         </Card>
+        */}
 
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Group gap="sm" mb="md">
