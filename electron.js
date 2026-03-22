@@ -19,7 +19,7 @@ function getBasePath() {
 
 function startWebServer() {
   const basePath = getBasePath()
-  const webPath = path.join(basePath, 'saveit-web', 'dist')
+  const webPath = path.join(basePath, 'planmybudget-web', 'dist')
   
   const webApp = express()
   webApp.use(express.json())

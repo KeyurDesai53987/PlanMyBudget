@@ -4,8 +4,8 @@ A personal finance web app built with React, Mantine UI, and PostgreSQL.
 
 ## Live Demo
 
-- **Frontend:** https://saveit.vercel.app
-- **Backend API:** https://saveit-r1gc.onrender.com
+- **Frontend:** https://planmybudget.vercel.app
+- **Backend API:** https://planmybudget-api.onrender.com
 - **Database:** Supabase (cloud)
 
 ## Features
@@ -35,7 +35,7 @@ A personal finance web app built with React, Mantine UI, and PostgreSQL.
 
 ### Live App
 
-Simply visit: https://saveit.vercel.app
+Simply visit: https://planmybudget.vercel.app
 
 Login with your credentials to start tracking your finances.
 
@@ -43,8 +43,8 @@ Login with your credentials to start tracking your finances.
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/KeyurDesai53987/SaveIt.git
-cd SaveIt
+git clone https://github.com/KeyurDesai53987/PlanMyBudget.git
+cd PlanMyBudget
 ```
 
 2. **Install dependencies:**
@@ -53,7 +53,7 @@ cd SaveIt
 cd api && npm install
 
 # Install frontend dependencies
-cd ../saveit-web && npm install
+cd ../planmybudget-web && npm install
 ```
 
 3. **Start PostgreSQL:**
@@ -76,7 +76,7 @@ node server.js
 
 Terminal 2 - Frontend:
 ```bash
-cd saveit-web
+cd planmybudget-web
 npm run dev
 ```
 
@@ -98,7 +98,7 @@ export DATABASE_URL="postgresql://user:password@host:5432/postgres"
 
 ### Frontend (Vercel)
 
-The frontend is deployed at https://saveit.vercel.app
+The frontend is deployed at https://planmybudget.vercel.app
 
 To redeploy:
 1. Push changes to GitHub
@@ -106,7 +106,7 @@ To redeploy:
 
 ### Backend (Render)
 
-The backend is deployed at https://saveit-r1gc.onrender.com
+The backend is deployed at https://planmybudget-api.onrender.com
 
 To redeploy:
 1. Push changes to GitHub

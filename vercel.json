@@ -1,8 +1,8 @@
 {
-  "buildCommand": "cd saveit-web && npm install && npm run build",
-  "outputDirectory": "saveit-web/dist",
+  "buildCommand": "cd planmybudget-web && npm install && npm run build",
+  "outputDirectory": "planmybudget-web/dist",
   "installCommand": "npm install",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://saveit-r1gc.onrender.com/api/$1" }
+    { "source": "/api/(.*)", "destination": "https://planmybudget-api.onrender.com/api/$1" }
   ]
 }

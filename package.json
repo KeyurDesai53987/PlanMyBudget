@@ -8,7 +8,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "build:web": "cd saveit-web && npm run build",
+    "build:web": "cd planmybudget-web && npm run build",
     "build:electron": "npm run build:web && electron-builder --mac",
     "build": "npm run build:web"
   },
@@ -36,7 +36,7 @@
     "files": [
       "electron.js",
       "api/**/*",
-      "saveit-web/dist/**/*",
+      "planmybudget-web/dist/**/*",
       "package.json"
     ],
     "extraMetadata": {
@@ -45,12 +45,12 @@
     "publish": {
       "provider": "github",
       "owner": "KeyurDesai53987",
-      "repo": "SaveIt"
+      "repo": "PlanMyBudget"
     },
     "mac": {
       "category": "public.app-category.finance",
       "target": "dmg",
-      "icon": "saveit-web/public/icon.icns"
+      "icon": "planmybudget-web/public/icon.icns"
     },
     "win": {
       "target": "nsis"
@@ -61,13 +61,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/KeyurDesai53987/SaveIt.git"
+    "url": "git+https://github.com/KeyurDesai53987/PlanMyBudget.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/KeyurDesai53987/SaveIt/issues"
+    "url": "https://github.com/KeyurDesai53987/PlanMyBudget/issues"
   },
-  "homepage": "https://github.com/KeyurDesai53987/SaveIt#readme"
+  "homepage": "https://github.com/KeyurDesai53987/PlanMyBudget#readme"
 }
