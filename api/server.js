@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors')
+const helmet = require('helmet')
 const path = require('path')
 const crypto = require('crypto')
 const { v4: uuidv4 } = require('uuid')
@@ -11,11 +12,20 @@ const { OAuth2Client } = require('google-auth-library')
 const app = express()
 const PORT = process.env.PORT || 4000
 
+// Security headers
+app.use(helmet())
+
+// CORS configuration
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'https://planmybudget.vercel.app']
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'https://planmybudget.vercel.app'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
+  credentials: true
 }))
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+
+// Body size limits
+app.use(express.json({ limit: '10kb' }))
+app.use(express.urlencoded({ extended: true, limit: '10kb' }))
 
 // Upstash Redis for rate limiting and OTP storage
 let redis = null
@@ -98,6 +108,88 @@ const transporter = nodemailer.createTransport({
 
 // Google OAuth client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+
+// Input validation helpers
+const validators = {
+  email: (value) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(value) && value.length <= 255
+  },
+  
+  password: (value) => {
+    return typeof value === 'string' && value.length >= 6 && value.length <= 128
+  },
+  
+  name: (value) => {
+    if (!value) return true // Optional field
+    return typeof value === 'string' && value.length >= 1 && value.length <= 100
+  },
+  
+  amount: (value) => {
+    const num = parseFloat(value)
+    return !isNaN(num) && num >= -999999999 && num <= 999999999
+  },
+  
+  date: (value) => {
+    if (!value) return false
+    const date = new Date(value)
+    return !isNaN(date.getTime()) && value.length <= 20
+  },
+  
+  text: (value, maxLen = 255) => {
+    if (!value) return true
+    return typeof value === 'string' && value.length <= maxLen
+  },
+  
+  id: (value) => {
+    return typeof value === 'string' && value.length > 0 && value.length <= 50
+  },
+  
+  currency: (value) => {
+    if (!value) return true // Optional
+    return typeof value === 'string' && /^[A-Z]{3}$/.test(value)
+  },
+  
+  type: (value, allowed) => {
+    return allowed.includes(value)
+  }
+}
+
+// Sanitize string - remove potential XSS characters
+function sanitizeString(str) {
+  if (!str || typeof str !== 'string') return str
+  return str
+    .replace(/[<>]/g, '') // Remove < and >
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+=/gi, '') // Remove event handlers
+    .trim()
+}
+
+// Validation middleware factory
+function validate(fields) {
+  return (req, res, next) => {
+    const errors = []
+    
+    for (const [field, validator] of Object.entries(fields)) {
+      const value = req.body?.[field]
+      if (!validator(value)) {
+        errors.push(`Invalid field: ${field}`)
+      }
+    }
+    
+    if (errors.length > 0) {
+      return res.status(400).json({ error: errors[0] })
+    }
+    
+    // Sanitize string fields
+    if (req.body) {
+      if (req.body.name) req.body.name = sanitizeString(req.body.name)
+      if (req.body.description) req.body.description = sanitizeString(req.body.description)
+    }
+    
+    next()
+  }
+}
 
 // OTP store (Redis when available, fallback to in-memory)
 async function setOTP(email, otp, attempts = 0) {
@@ -399,16 +491,9 @@ async function auth(req, res, next) {
 app.get('/api/status', (req, res) => res.json({ status: 'ok' }))
 
 // Register
-app.post('/api/users/register', async (req, res) => {
-  const { email, password } = req.body || {}
+app.post('/api/users/register', validate({ email: validators.email, password: validators.password, name: validators.name }), async (req, res) => {
+  const { email, password, name } = req.body || {}
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' })
-  
-  // Email format validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(email)) return res.status(400).json({ error: 'Invalid email format' })
-  
-  // Password strength validation
-  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' })
   
   const exists = await db.get('SELECT * FROM users WHERE LOWER(email) = $1', [email.toLowerCase()])
   if (exists) return res.status(400).json({ error: 'User already exists' })
@@ -431,7 +516,7 @@ app.post('/api/users/register', async (req, res) => {
 })
 
 // Login
-app.post('/api/users/login', async (req, res) => {
+app.post('/api/users/login', validate({ email: validators.email, password: validators.password }), async (req, res) => {
   const { email, password } = req.body || {}
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' })
   
@@ -605,7 +690,7 @@ app.get('/api/accounts', auth, async (req, res) => {
   res.json({ accounts: formatted })
 })
 
-app.post('/api/accounts', auth, async (req, res) => {
+app.post('/api/accounts', auth, validate({ name: (v) => validators.text(v, 100), type: (v) => validators.type(v, ['checking', 'savings', 'credit', 'cash', 'investment']), currency: validators.currency }), async (req, res) => {
   const { name, type, currency } = req.body || {}
   if (!name || !type) return res.status(400).json({ error: 'name and type required' })
   
@@ -846,7 +931,11 @@ app.get('/api/transactions', auth, async (req, res) => {
   res.json({ transactions: formatted })
 })
 
-app.post('/api/transactions', auth, async (req, res) => {
+app.post('/api/transactions', auth, validate({ 
+  amount: validators.amount,
+  date: validators.date,
+  description: (v) => validators.text(v, 500)
+}), async (req, res) => {
   const { accountId, accountid, date, amount, type, categoryId, categoryid, description } = req.body || {}
   const accId = accountId || accountid
   const catId = categoryId || categoryid
@@ -1018,7 +1107,11 @@ app.get('/api/goals', auth, async (req, res) => {
   res.json({ goals: formatted })
 })
 
-app.post('/api/goals', auth, async (req, res) => {
+app.post('/api/goals', auth, validate({
+  name: (v) => validators.text(v, 100),
+  targetAmount: validators.amount,
+  dueDate: validators.date
+}), async (req, res) => {
   const { name, targetAmount, targetamount, dueDate, duedate } = req.body || {}
   const tgtAmount = targetAmount || targetamount
   const due = dueDate || duedate
