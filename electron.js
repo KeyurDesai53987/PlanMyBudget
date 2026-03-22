@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain } = require('electron')
 const path = require('path')
 const { spawn } = require('child_process')
 const express = require('express')
@@ -8,6 +8,7 @@ const isDev = !app.isPackaged
 
 let mainWindow
 let webServer
+let updateStatus = { checking: false, available: false, downloading: false, ready: false, version: null, error: null }
 
 function getBasePath() {
   if (app.isPackaged) {
@@ -90,7 +91,8 @@ function createWindow() {
     height: 800,
     webPreferences: {
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
     },
     titleBarStyle: 'hiddenInset',
     title: 'PlanMyBudget'
@@ -128,6 +130,83 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   if (webServer) webServer.close()
+})
+
+// Auto-updater IPC handlers
+ipcMain.handle('check-for-updates', async () => {
+  try {
+    updateStatus.checking = true
+    updateStatus.error = null
+    const result = await autoUpdater.checkForUpdates()
+    return { checking: true, available: false, version: null }
+  } catch (err) {
+    updateStatus.checking = false
+    updateStatus.error = err.message
+    return { checking: false, error: err.message }
+  }
+})
+
+ipcMain.handle('download-update', async () => {
+  try {
+    await autoUpdater.downloadUpdate()
+    return { downloading: true }
+  } catch (err) {
+    return { error: err.message }
+  }
+})
+
+ipcMain.handle('install-update', () => {
+  autoUpdater.quitAndInstall()
+})
+
+ipcMain.handle('get-update-status', () => {
+  return updateStatus
+})
+
+// Listen for auto-updater events
+autoUpdater.on('checking-for-update', () => {
+  updateStatus.checking = true
+  updateStatus.error = null
+})
+
+autoUpdater.on('update-available', (info) => {
+  updateStatus.checking = false
+  updateStatus.available = true
+  updateStatus.version = info.version
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status-changed', updateStatus)
+  }
+})
+
+autoUpdater.on('update-not-available', () => {
+  updateStatus.checking = false
+  updateStatus.available = false
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status-changed', updateStatus)
+  }
+})
+
+autoUpdater.on('download-progress', (progress) => {
+  updateStatus.downloading = true
+  if (mainWindow) {
+    mainWindow.webContents.send('update-progress', progress.percent)
+  }
+})
+
+autoUpdater.on('update-downloaded', () => {
+  updateStatus.downloading = false
+  updateStatus.ready = true
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status-changed', updateStatus)
+  }
+})
+
+autoUpdater.on('error', (err) => {
+  updateStatus.error = err.message
+  updateStatus.checking = false
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status-changed', updateStatus)
+  }
 })
 
 // Auto-update functionality

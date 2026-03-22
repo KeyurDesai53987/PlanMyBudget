@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Avatar, Badge, Divider, Switch, useMantineColorScheme, SimpleGrid, Textarea, CopyButton, ActionIcon, Tooltip, Alert, Modal, FileInput } from '@mantine/core'
-import { IconUser, IconLock, IconCheck, IconInfoCircle, IconPalette, IconCalendar, IconCurrencyDollar, IconLogout, IconTrendingUp, IconTarget, IconReceipt, IconKey, IconCopy, IconCheck as IconCheckFilled, IconDownload, IconUpload, IconDatabase, IconAlertCircle } from '@tabler/icons-react'
+import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Avatar, Badge, Divider, Switch, useMantineColorScheme, SimpleGrid, Textarea, CopyButton, ActionIcon, Tooltip, Alert, Modal, FileInput, Progress } from '@mantine/core'
+import { IconUser, IconLock, IconCheck, IconInfoCircle, IconPalette, IconCalendar, IconCurrencyDollar, IconLogout, IconTrendingUp, IconTarget, IconReceipt, IconKey, IconCopy, IconCheck as IconCheckFilled, IconDownload, IconUpload, IconDatabase, IconAlertCircle, IconRefresh, IconRocket } from '@tabler/icons-react'
 import { api } from '../api'
 import { colors } from '../theme'
 import { SettingsSkeleton } from './Skeletons'
@@ -43,8 +43,48 @@ export default function Settings() {
   const [backupLoading, setBackupLoading] = useState(false)
   const [restoreLoading, setRestoreLoading] = useState(false)
   const [allData, setAllData] = useState({ accounts: [], transactions: [], budgets: [], goals: [], categories: [], recurring: [] })
+  const [updateStatus, setUpdateStatus] = useState({ checking: false, available: false, downloading: false, ready: false, version: null, error: null, progress: 0 })
+  const [isElectron, setIsElectron] = useState(false)
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => { 
+    loadData()
+    initUpdateChecker()
+  }, [])
+
+  const initUpdateChecker = async () => {
+    if (window.electronAPI) {
+      setIsElectron(true)
+      const status = await window.electronAPI.getUpdateStatus()
+      setUpdateStatus({ ...updateStatus, ...status })
+      
+      window.electronAPI.onUpdateStatusChanged((status) => {
+        setUpdateStatus(prev => ({ ...prev, ...status, progress: 0 }))
+      })
+      
+      window.electronAPI.onUpdateProgress((percent) => {
+        setUpdateStatus(prev => ({ ...prev, progress: percent }))
+      })
+      
+      await window.electronAPI.checkForUpdates()
+    }
+  }
+
+  const handleCheckUpdate = async () => {
+    if (!window.electronAPI) return
+    setUpdateStatus(prev => ({ ...prev, checking: true, error: null }))
+    await window.electronAPI.checkForUpdates()
+  }
+
+  const handleDownloadUpdate = async () => {
+    if (!window.electronAPI) return
+    setUpdateStatus(prev => ({ ...prev, downloading: true }))
+    await window.electronAPI.downloadUpdate()
+  }
+
+  const handleInstallUpdate = () => {
+    if (!window.electronAPI) return
+    window.electronAPI.installUpdate()
+  }
 
   const loadData = async () => {
     try {
@@ -437,6 +477,82 @@ export default function Settings() {
           </Stack>
         </Card>
 
+        {isElectron && (
+          <Card shadow="sm" padding="lg" radius="md" withBorder>
+            <Group gap="sm" mb="md">
+              <IconRocket size={20} />
+              <Text fw={600}>App Updates</Text>
+            </Group>
+            <Text size="xs" c="dimmed" mb="md">
+              Check for updates and install the latest version of PlanMyBudget.
+            </Text>
+            {updateStatus.error && (
+              <Alert color="red" variant="light" mb="sm">
+                {updateStatus.error}
+              </Alert>
+            )}
+            {updateStatus.available && !updateStatus.downloading && !updateStatus.ready && (
+              <Alert color="blue" variant="light" mb="sm">
+                Version {updateStatus.version} is available!
+              </Alert>
+            )}
+            {updateStatus.ready && (
+              <Alert color="green" variant="light" mb="sm">
+                Update ready! Click Install to restart and update.
+              </Alert>
+            )}
+            {updateStatus.downloading && (
+              <Stack gap="xs" mb="sm">
+                <Text size="sm">Downloading update...</Text>
+                <Progress value={updateStatus.progress} size="sm" radius="xl" />
+                <Text size="xs" c="dimmed">{Math.round(updateStatus.progress)}% complete</Text>
+              </Stack>
+            )}
+            {updateStatus.checking && (
+              <Text size="sm" c="dimmed">Checking for updates...</Text>
+            )}
+            {!updateStatus.checking && !updateStatus.available && !updateStatus.downloading && !updateStatus.ready && !updateStatus.error && (
+              <Text size="sm" c="dimmed">You're up to date!</Text>
+            )}
+            <Group mt="sm">
+              {!updateStatus.available && !updateStatus.downloading && !updateStatus.ready && (
+                <Button
+                  variant="light"
+                  color="gray"
+                  size="xs"
+                  leftSection={<IconRefresh size={14} />}
+                  onClick={handleCheckUpdate}
+                  disabled={updateStatus.checking}
+                >
+                  Check for Updates
+                </Button>
+              )}
+              {updateStatus.available && !updateStatus.ready && (
+                <Button
+                  variant="light"
+                  color="gray"
+                  size="xs"
+                  leftSection={<IconDownload size={14} />}
+                  onClick={handleDownloadUpdate}
+                  disabled={updateStatus.downloading}
+                >
+                  Download Update
+                </Button>
+              )}
+              {updateStatus.ready && (
+                <Button
+                  color="gray"
+                  size="xs"
+                  leftSection={<IconRocket size={14} />}
+                  onClick={handleInstallUpdate}
+                >
+                  Install & Restart
+                </Button>
+              )}
+            </Group>
+          </Card>
+        )}
+
         {/* API Keys section hidden temporarily */}
         {/* 
         <Card shadow="sm" padding="lg" radius="md" withBorder>
@@ -456,7 +572,7 @@ export default function Settings() {
           <Stack gap="xs">
             <Text size="lg" fw={700}>PlanMyBudget</Text>
             <Text size="sm" c="dimmed">Personal Finance Tracker</Text>
-            <Badge size="sm" variant="light" color="gray">Version 1.0.0</Badge>
+            <Badge size="sm" variant="light" color="gray">Version 1.1.0</Badge>
             <Divider my="sm" />
             <Text size="sm">
               PlanMyBudget helps you track income, expenses, budgets, and financial goals with an intuitive interface.
