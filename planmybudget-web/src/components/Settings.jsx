@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Avatar, Badge, Divider, Switch, useMantineColorScheme, SimpleGrid, Textarea, CopyButton, ActionIcon, Tooltip, Alert, Modal, FileInput, Progress } from '@mantine/core'
-import { IconUser, IconLock, IconCheck, IconInfoCircle, IconPalette, IconCalendar, IconCurrencyDollar, IconLogout, IconTrendingUp, IconTarget, IconReceipt, IconKey, IconCopy, IconCheck as IconCheckFilled, IconDownload, IconUpload, IconDatabase, IconAlertCircle, IconRefresh, IconRocket } from '@tabler/icons-react'
+import { IconUser, IconLock, IconCheck, IconInfoCircle, IconPalette, IconCalendar, IconCurrencyDollar, IconLogout, IconTrendingUp, IconTarget, IconReceipt, IconKey, IconCopy, IconCheck as IconCheckFilled, IconDownload, IconUpload, IconDatabase, IconAlertCircle, IconRefresh, IconRocket, IconBell } from '@tabler/icons-react'
 import { api } from '../api'
 import { colors } from '../theme'
 import { SettingsSkeleton } from './Skeletons'
@@ -84,6 +84,39 @@ export default function Settings() {
   const handleInstallUpdate = () => {
     if (!window.electronAPI) return
     window.electronAPI.installUpdate()
+  }
+
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushLoading, setPushLoading] = useState(false)
+
+  const togglePushNotifications = async () => {
+    setPushLoading(true)
+    try {
+      if (pushEnabled) {
+        await api('/push/unsubscribe', { method: 'POST' })
+        setPushEnabled(false)
+        setMessage({ type: 'success', text: 'Push notifications disabled' })
+      } else {
+        if ('Notification' in window) {
+          const permission = await Notification.requestPermission()
+          if (permission === 'granted') {
+            await api('/push/subscribe', {
+              method: 'POST',
+              body: JSON.stringify({ subscription: { enabled: true } })
+            })
+            setPushEnabled(true)
+            setMessage({ type: 'success', text: 'Push notifications enabled!' })
+          } else {
+            setMessage({ type: 'error', text: 'Notification permission denied' })
+          }
+        } else {
+          setMessage({ type: 'error', text: 'Push notifications not supported' })
+        }
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Failed to toggle notifications' })
+    }
+    setPushLoading(false)
   }
 
   const loadData = async () => {
@@ -475,6 +508,30 @@ export default function Settings() {
               {allData.goals.length} goals, {allData.categories.length} categories, {allData.recurring.length} recurring
             </Text>
           </Stack>
+        </Card>
+
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Group gap="sm" mb="md">
+            <IconBell size={20} />
+            <Text fw={600}>Notifications</Text>
+          </Group>
+          <Group justify="space-between" mb="sm">
+            <div>
+              <Text size="sm">Push Notifications</Text>
+              <Text size="xs" c="dimmed">Receive alerts for budget warnings and reminders</Text>
+            </div>
+            <Switch
+              checked={pushEnabled}
+              onChange={togglePushNotifications}
+              disabled={pushLoading}
+              color="gray"
+            />
+          </Group>
+          {pushEnabled && (
+            <Alert color="green" variant="light" mt="sm">
+              Push notifications are enabled
+            </Alert>
+          )}
         </Card>
 
         {isElectron && (

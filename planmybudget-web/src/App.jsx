@@ -11,15 +11,22 @@ import Recurring from './components/Recurring'
 import Categories from './components/Categories'
 import Settings from './components/Settings'
 import Navbar from './components/Navbar'
+import { WhatsNewModal, checkForNewVersion } from './components/WhatsNew'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [showWhatsNew, setShowWhatsNew] = useState(false)
 
   useEffect(() => {
     const token = getToken()
     setIsAuthenticated(!!token)
     setLoading(false)
+    
+    // Show What's New modal on first visit after login
+    if (token && checkForNewVersion()) {
+      setShowWhatsNew(true)
+    }
   }, [])
 
   const handleLogout = () => {
@@ -38,6 +45,10 @@ function App() {
       ) : (
         <>
           <Navbar onLogout={handleLogout} />
+          <WhatsNewModal 
+            opened={showWhatsNew} 
+            onClose={() => setShowWhatsNew(false)} 
+          />
           <main className="main-content">
             <Routes>
               <Route path="/" element={<Dashboard />} />

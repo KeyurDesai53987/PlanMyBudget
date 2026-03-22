@@ -27,6 +27,34 @@ app.use(cors({
 app.use(express.json({ limit: '10kb' }))
 app.use(express.urlencoded({ extended: true, limit: '10kb' }))
 
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now()
+  const originalSend = res.send
+  
+  res.send = function(data) {
+    const duration = Date.now() - start
+    const logLevel = res.statusCode >= 400 ? 'error' : 'info'
+    const log = {
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      duration: `${duration}ms`,
+      ip: req.ip,
+      userAgent: req.get('user-agent')?.substring(0, 100)
+    }
+    
+    if (logLevel === 'error' || process.env.NODE_ENV !== 'production') {
+      console.log(`[${log.timestamp}] ${req.method} ${req.path} ${res.statusCode} ${duration}ms`)
+    }
+    
+    originalSend.call(this, data)
+  }
+  
+  next()
+})
+
 // Upstash Redis for rate limiting and OTP storage
 let redis = null
 let ratelimit = null
@@ -178,7 +206,10 @@ function validate(fields) {
     }
     
     if (errors.length > 0) {
-      return res.status(400).json({ error: errors[0] })
+      return res.status(400).json({ 
+        error: errors[0],
+        details: errors
+      })
     }
     
     // Sanitize string fields
@@ -190,6 +221,30 @@ function validate(fields) {
     next()
   }
 }
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err)
+  
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ 
+      error: 'Invalid JSON in request body',
+      code: 'INVALID_JSON'
+    })
+  }
+  
+  if (err.code === 'ECONNREFUSED') {
+    return res.status(503).json({ 
+      error: 'Database connection failed. Please try again later.',
+      code: 'DB_UNAVAILABLE'
+    })
+  }
+  
+  res.status(500).json({ 
+    error: 'An unexpected error occurred. Please try again.',
+    code: 'INTERNAL_ERROR'
+  })
+})
 
 // OTP store (Redis when available, fallback to in-memory)
 async function setOTP(email, otp, attempts = 0) {
@@ -400,6 +455,32 @@ async function initDb() {
     )
   `)
 
+  // Create indexes for better query performance
+  const indexes = [
+    'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
+    'CREATE INDEX IF NOT EXISTS idx_accounts_userid ON accounts(userid)',
+    'CREATE INDEX IF NOT EXISTS idx_transactions_accountid ON transactions(accountid)',
+    'CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date)',
+    'CREATE INDEX IF NOT EXISTS idx_transactions_categoryid ON transactions(categoryid)',
+    'CREATE INDEX IF NOT EXISTS idx_sessions_userid ON sessions(userid)',
+    'CREATE INDEX IF NOT EXISTS idx_sessions_expiresat ON sessions(expiresat)',
+    'CREATE INDEX IF NOT EXISTS idx_budgets_userid ON budgets(userid)',
+    'CREATE INDEX IF NOT EXISTS idx_budgets_month_year ON budgets(year, month)',
+    'CREATE INDEX IF NOT EXISTS idx_goals_userid ON goals(userid)',
+    'CREATE INDEX IF NOT EXISTS idx_recurring_userid ON recurring(userid)',
+    'CREATE INDEX IF NOT EXISTS idx_recurring_nextdate ON recurring(nextdate)',
+    'CREATE INDEX IF NOT EXISTS idx_api_keys_userid ON api_keys(userid)',
+    'CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(keyprefix)'
+  ]
+  
+  for (const idx of indexes) {
+    try {
+      await db.run(idx)
+    } catch (e) {
+      // Index may already exist
+    }
+  }
+
   // Seed demo user if not exists
   const demoUser = await db.get('SELECT * FROM users WHERE email = $1', ['demo@saveit.app'])
   if (!demoUser) {
@@ -438,6 +519,45 @@ INSERT INTO budgets (id, userid, month, year, currency, lines)
     `, ['gl-1', 'u-demo', 'Emergency Fund', 5000, 1200, 'active'])
 
     console.log('Demo user seeded: demo@saveit.app / password')
+  }
+}
+
+// Email notification function for budget alerts
+async function sendBudgetAlertEmail(email, budget, spent, limit, currency) {
+  try {
+    const percentage = Math.round((spent / limit) * 100)
+    const remaining = limit - spent
+    const status = percentage >= 100 ? 'exceeded' : percentage >= 80 ? 'almost reached' : 'on track'
+    
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER || 'noreply@planmybudget.app',
+      to: email,
+      subject: `Budget Alert: ${budget.name} - ${percentage}% used`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #475569;">Budget Alert</h2>
+          <p>Your budget for <strong>${budget.name}</strong> is ${status}:</p>
+          
+          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Spent:</strong> ${currency}${spent.toFixed(2)}</p>
+            <p style="margin: 5px 0;"><strong>Budget:</strong> ${currency}${limit.toFixed(2)}</p>
+            <p style="margin: 5px 0;"><strong>Remaining:</strong> ${currency}${remaining.toFixed(2)}</p>
+            <p style="margin: 5px 0;"><strong>Usage:</strong> ${percentage}%</p>
+          </div>
+          
+          ${percentage >= 100 ? '<p style="color: #dc2626;"><strong>Warning:</strong> You have exceeded your budget!</p>' : ''}
+          ${percentage >= 80 && percentage < 100 ? '<p style="color: #f59e0b;"><strong>Warning:</strong> You are approaching your budget limit.</p>' : ''}
+          
+          <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
+            Sent by PlanMyBudget
+          </p>
+        </div>
+      `
+    })
+    return true
+  } catch (err) {
+    console.log('Budget alert email failed:', err.message)
+    return false
   }
 }
 
@@ -1027,6 +1147,69 @@ app.delete('/api/transactions/:id', auth, async (req, res) => {
   
   await db.run('DELETE FROM transactions WHERE id = $1', [id])
   res.json({ success: true, accountBalance: account?.balance })
+})
+
+// Check budget alerts
+app.get('/api/budgets/alerts', auth, async (req, res) => {
+  const now = new Date()
+  const currentMonth = now.getMonth() + 1
+  const currentYear = now.getFullYear()
+  
+  const budgets = await db.all(
+    'SELECT * FROM budgets WHERE userid = $1 AND month = $2 AND year = $3',
+    [req.userid, currentMonth, currentYear]
+  )
+  
+  const user = await db.get('SELECT * FROM users WHERE id = $1', [req.userid])
+  const accounts = await db.all('SELECT * FROM accounts WHERE userid = $1', [req.userid])
+  
+  const alerts = []
+  
+  for (const budget of budgets) {
+    const lines = JSON.parse(budget.lines || '[]')
+    
+    for (const line of lines) {
+      if (!line.limit || !line.categoryId) continue
+      
+      const spent = Math.abs(line.spent || 0)
+      const limit = line.limit
+      const percentage = (spent / limit) * 100
+      
+      if (percentage >= 80) {
+        alerts.push({
+          categoryId: line.categoryId,
+          spent,
+          limit,
+          percentage: Math.round(percentage),
+          currency: budget.currency || 'USD'
+        })
+      }
+    }
+  }
+  
+  res.json({ alerts, currency: user?.preferredcurrency || 'USD' })
+})
+
+// Send budget alert email
+app.post('/api/budgets/send-alert', auth, async (req, res) => {
+  const { categoryId, spent, limit } = req.body
+  if (!categoryId || typeof spent !== 'number' || typeof limit !== 'number') {
+    return res.status(400).json({ error: 'categoryId, spent, and limit required' })
+  }
+  
+  const user = await db.get('SELECT * FROM users WHERE id = $1', [req.userid])
+  if (!user?.email) return res.status(400).json({ error: 'No email found' })
+  
+  const category = await db.get('SELECT * FROM categories WHERE id = $1', [categoryId])
+  const sent = await sendBudgetAlertEmail(
+    user.email,
+    { name: category?.name || 'Budget' },
+    spent,
+    limit,
+    user.preferredcurrency || 'USD'
+  )
+  
+  res.json({ success: sent })
 })
 
 // Budgets
