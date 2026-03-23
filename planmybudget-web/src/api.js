@@ -100,6 +100,15 @@ export function isDemoUser() {
   return email === 'demo@saveit.app'
 }
 
+export async function checkIsDemoUser() {
+  try {
+    const res = await api('/profile')
+    return res.preferences?.email === 'demo@saveit.app'
+  } catch {
+    return false
+  }
+}
+
 export function setDemoEmail(email) {
   if (email === 'demo@saveit.app') {
     localStorage.setItem('demo_email', email)

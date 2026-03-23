@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Card, Group, Text, Stack, TextInput, PasswordInput, Button, Avatar, Badge, Divider, Switch, useMantineColorScheme, SimpleGrid, Textarea, CopyButton, ActionIcon, Tooltip, Alert, Modal, FileInput, Progress } from '@mantine/core'
 import { IconUser, IconLock, IconCheck, IconInfoCircle, IconPalette, IconCalendar, IconCurrencyDollar, IconLogout, IconTrendingUp, IconTarget, IconReceipt, IconKey, IconCopy, IconCheck as IconCheckFilled, IconDownload, IconUpload, IconDatabase, IconAlertCircle, IconRefresh, IconRocket, IconBell } from '@tabler/icons-react'
-import { api, isDemoUser } from '../api'
+import { api, isDemoUser, checkIsDemoUser } from '../api'
 import { colors } from '../theme'
 import { SettingsSkeleton } from './Skeletons'
 
@@ -48,7 +48,7 @@ export default function Settings() {
   const [isDemo, setIsDemo] = useState(false)
 
   useEffect(() => { 
-    setIsDemo(isDemoUser())
+    checkIsDemoUser().then(setIsDemo)
     loadData()
     initUpdateChecker()
   }, [])
