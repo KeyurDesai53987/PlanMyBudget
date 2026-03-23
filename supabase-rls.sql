@@ -12,7 +12,7 @@ BEGIN
     )
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 -- Enable RLS on all tables
 ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;

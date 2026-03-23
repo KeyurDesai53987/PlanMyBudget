@@ -968,10 +968,15 @@ app.put('/api/change-password', auth, async (req, res) => {
     return res.status(400).json({ error: 'Current and new password required' })
   }
   
-  const user = await db.get('SELECT passwordhash FROM users WHERE id = $1', [req.userid])
+  const user = await db.get('SELECT passwordhash, email FROM users WHERE id = $1', [req.userid])
   if (!user) {
     return res.status(404).json({ error: 'User not found' })
   }
+  
+  if (user.email === 'demo@saveit.app') {
+    return res.status(403).json({ error: 'Password change is disabled for demo account' })
+  }
+  
   const isValid = bcrypt.compareSync(currentPassword, user.passwordhash)
   
   if (!isValid) {

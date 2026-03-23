@@ -420,42 +420,63 @@ export default function Settings() {
           </form>
         </Card>
 
+        {!isDemo && (
+          <Card shadow="sm" padding="lg" radius="md" withBorder>
+            <Group gap="sm" mb="md">
+              <IconLock size={20} />
+              <Text fw={600}>Change Password</Text>
+            </Group>
+            <form onSubmit={handlePasswordChange}>
+              <Stack gap="sm">
+                <PasswordInput
+                  label="Current Password"
+                  placeholder="Enter current password"
+                  value={passwordData.current}
+                  onChange={(e) => setPasswordData({ ...passwordData, current: e.target.value })}
+                />
+                <PasswordInput
+                  label="New Password"
+                  placeholder="Enter new password"
+                  value={passwordData.new}
+                  onChange={(e) => setPasswordData({ ...passwordData, new: e.target.value })}
+                />
+                <PasswordInput
+                  label="Confirm New Password"
+                  placeholder="Confirm new password"
+                  value={passwordData.confirm}
+                  onChange={(e) => setPasswordData({ ...profile, confirm: e.target.value })}
+                />
+                <Button 
+                  type="submit" 
+                  color="gray" 
+                  loading={saving}
+                  disabled={!passwordData.current || !passwordData.new || !passwordData.confirm}
+                  style={{ alignSelf: 'flex-start' }}
+                >
+                  Update Password
+                </Button>
+              </Stack>
+            </form>
+          </Card>
+        )}
+
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Group gap="sm" mb="md">
-            <IconLock size={20} />
-            <Text fw={600}>Change Password</Text>
+            <IconPalette size={20} />
+            <Text fw={600}>Appearance</Text>
           </Group>
-          <form onSubmit={handlePasswordChange}>
-            <Stack gap="sm">
-              <PasswordInput
-                label="Current Password"
-                placeholder="Enter current password"
-                value={passwordData.current}
-                onChange={(e) => setPasswordData({ ...passwordData, current: e.target.value })}
+          <Stack gap="sm">
+            <Group justify="space-between">
+              <div>
+                <Text size="sm">Dark Mode</Text>
+                <Text size="xs" c="dimmed">Switch between light and dark themes</Text>
+              </div>
+              <Switch
+                checked={isDark}
+                onChange={(event) => setColorScheme(event.currentTarget.checked ? 'dark' : 'light')}
               />
-              <PasswordInput
-                label="New Password"
-                placeholder="Enter new password"
-                value={passwordData.new}
-                onChange={(e) => setPasswordData({ ...passwordData, new: e.target.value })}
-              />
-              <PasswordInput
-                label="Confirm New Password"
-                placeholder="Confirm new password"
-                value={passwordData.confirm}
-                onChange={(e) => setPasswordData({ ...passwordData, confirm: e.target.value })}
-              />
-              <Button 
-                type="submit" 
-                color="gray" 
-                loading={saving}
-                disabled={!passwordData.current || !passwordData.new || !passwordData.confirm}
-                style={{ alignSelf: 'flex-start' }}
-              >
-                Update Password
-              </Button>
-            </Stack>
-          </form>
+            </Group>
+          </Stack>
         </Card>
 
         <Card shadow="sm" padding="lg" radius="md" withBorder>
