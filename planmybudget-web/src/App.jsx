@@ -1,18 +1,30 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { getToken, logout } from './api'
+import { Skeleton } from '@mantine/core'
+import { DashboardSkeleton } from './components/Skeletons'
 import Login from './components/Login'
 import Landing from './components/Landing'
-import Dashboard from './components/Dashboard'
-import Accounts from './components/Accounts'
-import Transactions from './components/Transactions'
-import Budgets from './components/Budgets'
-import Goals from './components/Goals'
-import Recurring from './components/Recurring'
-import Categories from './components/Categories'
-import Settings from './components/Settings'
 import Navbar from './components/Navbar'
 import { WhatsNewModal, checkForNewVersion } from './components/WhatsNew'
+
+const Dashboard = lazy(() => import('./components/Dashboard'))
+const Accounts = lazy(() => import('./components/Accounts'))
+const Transactions = lazy(() => import('./components/Transactions'))
+const Budgets = lazy(() => import('./components/Budgets'))
+const Goals = lazy(() => import('./components/Goals'))
+const Recurring = lazy(() => import('./components/Recurring'))
+const Categories = lazy(() => import('./components/Categories'))
+const Settings = lazy(() => import('./components/Settings'))
+
+function PageLoader() {
+  return (
+    <div>
+      <Skeleton height={32} width={150} mb="lg" />
+      <DashboardSkeleton />
+    </div>
+  )
+}
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -56,17 +68,19 @@ function App() {
           />
           <main className="main-content" key={location.pathname}>
             <div className="page-enter-active">
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/accounts" element={<Accounts />} />
-                <Route path="/transactions" element={<Transactions />} />
-                <Route path="/budgets" element={<Budgets />} />
-                <Route path="/goals" element={<Goals />} />
-                <Route path="/recurring" element={<Recurring />} />
-                <Route path="/categories" element={<Categories />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/accounts" element={<Accounts />} />
+                  <Route path="/transactions" element={<Transactions />} />
+                  <Route path="/budgets" element={<Budgets />} />
+                  <Route path="/goals" element={<Goals />} />
+                  <Route path="/recurring" element={<Recurring />} />
+                  <Route path="/categories" element={<Categories />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
             </div>
           </main>
         </>

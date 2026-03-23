@@ -7,13 +7,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'logo.svg'],
+      includeAssets: ['favicon.ico', 'logo.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
       manifest: {
         name: 'PlanMyBudget',
         short_name: 'PlanMyBudget',
         description: 'Personal Finance Tracker',
         theme_color: '#475569',
-        background_color: '#1a1a1a',
+        background_color: '#f8fafc',
         display: 'standalone',
         orientation: 'portrait-primary',
         icons: [
@@ -37,12 +37,13 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'google-fonts-cache',
+              cacheName: 'google-fonts-stylesheets',
               expiration: {
                 maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 365
@@ -56,9 +57,9 @@ export default defineConfig({
             urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'gstatic-fonts-cache',
+              cacheName: 'gstatic-fonts-webfonts',
               expiration: {
-                maxEntries: 10,
+                maxEntries: 30,
                 maxAgeSeconds: 60 * 60 * 24 * 365
               },
               cacheableResponse: {
@@ -80,11 +81,38 @@ export default defineConfig({
                 statuses: [0, 200]
               }
             }
+          },
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'static-images',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
           }
         ]
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'mantine': ['@mantine/core', '@mantine/hooks', '@mantine/dates', '@mantine/form'],
+          'charts': ['recharts'],
+          'icons': ['@tabler/icons-react']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
+  },
   server: {
     port: 5173,
     proxy: {
