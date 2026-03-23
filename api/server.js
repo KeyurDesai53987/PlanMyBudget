@@ -159,7 +159,7 @@ const validators = {
   },
   
   date: (value) => {
-    if (!value) return false
+    if (!value) return true // Optional field
     const date = new Date(value)
     return !isNaN(date.getTime()) && value.length <= 20
   },
