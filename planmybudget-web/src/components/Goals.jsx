@@ -105,13 +105,13 @@ export default function Goals() {
       )}
 
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-        {goals.length > 0 ? goals.map(goal => {
+        {goals.length > 0 ? goals.map((goal, index) => {
           const currentAmt = goal.currentAmount || goal.currentamount || 0
           const targetAmt = goal.targetAmount || goal.targetamount || 0
           const progress = targetAmt > 0 ? (currentAmt / targetAmt) * 100 : 0
           const remaining = targetAmt - currentAmt
           return (
-            <Card key={goal.id} shadow="sm" padding="lg" radius="md" withBorder>
+            <Card key={goal.id} shadow="sm" padding="lg" radius="md" withBorder className="animated-card list-item" style={{ animationDelay: `${index * 50}ms` }}>
               <Stack gap="sm">
                 <Group justify="space-between">
                   <Group gap="xs">

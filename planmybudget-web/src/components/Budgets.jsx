@@ -244,7 +244,7 @@ export default function Budgets() {
       )}
 
       <SimpleGrid cols={{ base: 1, sm: 2 }}>
-        {sortedBudgets.length > 0 ? sortedBudgets.map(budget => {
+        {sortedBudgets.length > 0 ? sortedBudgets.map((budget, index) => {
           const total = budget.lines.reduce((sum, l) => sum + (l.amount || 0), 0)
           const totalSpent = budget.lines.reduce((sum, l) => sum + getSpentAmount(l.categoryId, budget.month, budget.year), 0)
           const overallStatus = getBudgetStatus(totalSpent, total)
@@ -254,7 +254,7 @@ export default function Budgets() {
                          (new Date().getFullYear() === budget.year && new Date().getMonth() + 1 > budget.month)
           
           return (
-            <Card key={budget.id} shadow="sm" padding="md" radius="md" withBorder>
+            <Card key={budget.id} shadow="sm" padding="md" radius="md" withBorder className="animated-card list-item" style={{ animationDelay: `${index * 50}ms` }}>
               <Group justify="space-between" mb={isExpanded ? "sm" : 0}>
                 <Group gap="xs">
                   <ActionIcon 

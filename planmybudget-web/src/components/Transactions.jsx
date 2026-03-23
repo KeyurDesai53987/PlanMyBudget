@@ -532,8 +532,8 @@ export default function Transactions() {
       )}
 
       <Stack gap="xs">
-        {sortedTransactions.length > 0 ? paginatedTransactions.map(txn => (
-          <Card key={txn.id} shadow="sm" padding="sm" radius="md" withBorder>
+        {sortedTransactions.length > 0 ? paginatedTransactions.map((txn, index) => (
+          <Card key={txn.id} shadow="sm" padding="sm" radius="md" withBorder className="animated-card list-item" style={{ animationDelay: `${index * 30}ms` }}>
             <Group justify="space-between">
               <Group gap="sm">
                 <div style={{

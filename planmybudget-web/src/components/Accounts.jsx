@@ -138,7 +138,7 @@ export default function Accounts() {
         </Card>
       )}
 
-      <Card shadow="sm" padding="lg" radius="md" mb="lg" style={{ background: isDark ? '#252525' : '#475569' }}>
+      <Card shadow="sm" padding="lg" radius="md" mb="lg" style={{ background: isDark ? '#252525' : '#475569' }} className="animated-card">
         <Group justify="space-between">
           <Text c="white" size="sm" opacity={0.9}>Total Balance</Text>
           <Text c="white" fw={700} style={{ fontSize: '1.5rem' }}>${totalBalance.toLocaleString()}</Text>
@@ -146,11 +146,11 @@ export default function Accounts() {
       </Card>
 
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-        {accounts.map(acc => {
+        {accounts.map((acc, index) => {
           const typeInfo = ACCOUNT_TYPES.find(t => t.id === acc.type) || ACCOUNT_TYPES[0]
           const Icon = typeInfo.icon
           return (
-            <Card key={acc.id} shadow="sm" padding="md" radius="md" withBorder>
+            <Card key={acc.id} shadow="sm" padding="md" radius="md" withBorder className="animated-card list-item" style={{ animationDelay: `${index * 50}ms` }}>
               <Group justify="space-between">
                 <Group gap="sm">
                   <div style={{

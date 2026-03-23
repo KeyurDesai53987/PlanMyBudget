@@ -106,7 +106,7 @@ export default function Categories() {
         {categories.map((cat, idx) => {
           const color = DEFAULT_COLORS[idx % DEFAULT_COLORS.length]
           return (
-            <Card key={cat.id} shadow="sm" padding="md" radius="md" withBorder>
+            <Card key={cat.id} shadow="sm" padding="md" radius="md" withBorder className="animated-card list-item" style={{ animationDelay: `${idx * 30}ms` }}>
               <Group justify="space-between">
                 <Group gap="sm">
                   <div style={{

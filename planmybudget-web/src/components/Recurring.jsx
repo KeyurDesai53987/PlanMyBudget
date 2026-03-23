@@ -195,8 +195,8 @@ export default function Recurring() {
       )}
 
       <Stack gap="sm">
-        {recurring.length > 0 ? recurring.map(r => (
-          <Card key={r.id} shadow="sm" padding="md" radius="md" withBorder>
+        {recurring.length > 0 ? recurring.map((r, index) => (
+          <Card key={r.id} shadow="sm" padding="md" radius="md" withBorder className="animated-card list-item" style={{ animationDelay: `${index * 50}ms` }}>
             <Group justify="space-between">
               <Group gap="md">
                 <div style={{
@@ -250,7 +250,7 @@ export default function Recurring() {
             </Group>
           </Card>
         )) : (
-          <Card shadow="sm" padding="xl" radius="md" withBorder>
+          <Card shadow="sm" padding="xl" radius="md" withBorder className="animated-card">
             <Text c="dimmed" ta="center">No recurring transactions yet</Text>
             <Text c="dimmed" ta="center" size="sm">Create one to automatically add transactions</Text>
           </Card>

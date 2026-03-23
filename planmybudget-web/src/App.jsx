@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { getToken, logout } from './api'
 import Login from './components/Login'
 import Landing from './components/Landing'
@@ -18,13 +18,13 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
   const [showWhatsNew, setShowWhatsNew] = useState(false)
+  const location = useLocation()
 
   useEffect(() => {
     const token = getToken()
     setIsAuthenticated(!!token)
     setLoading(false)
     
-    // Show What's New modal on first visit after login
     if (token && checkForNewVersion()) {
       setShowWhatsNew(true)
     }
@@ -54,18 +54,20 @@ function App() {
             opened={showWhatsNew} 
             onClose={() => setShowWhatsNew(false)} 
           />
-          <main className="main-content">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/accounts" element={<Accounts />} />
-              <Route path="/transactions" element={<Transactions />} />
-              <Route path="/budgets" element={<Budgets />} />
-              <Route path="/goals" element={<Goals />} />
-              <Route path="/recurring" element={<Recurring />} />
-              <Route path="/categories" element={<Categories />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+          <main className="main-content" key={location.pathname}>
+            <div className="page-enter-active">
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/accounts" element={<Accounts />} />
+                <Route path="/transactions" element={<Transactions />} />
+                <Route path="/budgets" element={<Budgets />} />
+                <Route path="/goals" element={<Goals />} />
+                <Route path="/recurring" element={<Recurring />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </div>
           </main>
         </>
       )}
