@@ -13,7 +13,7 @@ const app = express()
 const PORT = process.env.PORT || 4000
 
 // Load push notification routes
-require('./push-notifications')
+const { initPushRoutes } = require('./push-notifications')
 
 // Security headers
 app.use(helmet())
@@ -607,6 +607,9 @@ async function auth(req, res, next) {
   
   return res.status(401).json({ error: 'Unauthorized' })
 }
+
+// Initialize push notification routes
+initPushRoutes(app, auth)
 
 /** API Routes **/
 
