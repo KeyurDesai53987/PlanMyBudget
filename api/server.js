@@ -145,7 +145,7 @@ const validators = {
   },
   
   password: (value) => {
-    return typeof value === 'string' && value.length >= 6 && value.length <= 128
+    return typeof value === 'string' && value.length >= 4 && value.length <= 128
   },
   
   name: (value) => {

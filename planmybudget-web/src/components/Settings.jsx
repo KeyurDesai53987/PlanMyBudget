@@ -177,8 +177,8 @@ export default function Settings() {
       setMessage({ type: 'error', text: 'Passwords do not match' })
       return
     }
-    if (passwordData.new.length < 6) {
-      setMessage({ type: 'error', text: 'Password must be at least 6 characters' })
+    if (passwordData.new.length < 4) {
+      setMessage({ type: 'error', text: 'Password must be at least 4 characters' })
       return
     }
     setSaving(true)

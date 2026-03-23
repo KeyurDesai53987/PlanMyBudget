@@ -41,6 +41,8 @@ export async function login(email, password) {
   setToken(resp.token)
   if (email === 'demo@saveit.app') {
     setDemoEmail(email)
+  } else {
+    clearDemoEmail()
   }
   return resp
 }
@@ -67,6 +69,9 @@ export async function verifyOTP(email, otp, password, name) {
     body: JSON.stringify({ email, otp, password, name })
   })
   setToken(resp.token)
+  if (email !== 'demo@saveit.app') {
+    clearDemoEmail()
+  }
   return resp
 }
 
@@ -76,11 +81,13 @@ export async function googleAuth(credential) {
     body: JSON.stringify({ idToken: credential })
   })
   setToken(resp.token)
+  clearDemoEmail()
   return resp
 }
 
 export function logout() {
   clearToken()
+  clearDemoEmail()
 }
 
 export async function loginAsDemo() {
@@ -97,4 +104,8 @@ export function setDemoEmail(email) {
   if (email === 'demo@saveit.app') {
     localStorage.setItem('demo_email', email)
   }
+}
+
+export function clearDemoEmail() {
+  localStorage.removeItem('demo_email')
 }
