@@ -12,6 +12,9 @@ const { OAuth2Client } = require('google-auth-library')
 const app = express()
 const PORT = process.env.PORT || 4000
 
+// Load push notification routes
+require('./push-notifications')
+
 // Security headers
 app.use(helmet())
 
