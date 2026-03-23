@@ -1,5 +1,26 @@
 :root {
   --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --border-color: #e2e8f0;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+[data-mantine-color-scheme="dark"] {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border-color: #334155;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -10,6 +31,9 @@ body {
   font-family: var(--font);
   min-height: 100vh;
   -webkit-text-size-adjust: 100%;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
 #root { min-height: 100vh; }
@@ -17,7 +41,8 @@ body {
 .app { 
   min-height: 100vh; 
   display: flex; 
-  flex-direction: column; 
+  flex-direction: column;
+  background-color: var(--bg-primary);
 }
 
 .main-content {
@@ -26,6 +51,7 @@ body {
   max-width: 1000px;
   margin: 0 auto;
   width: 100%;
+  background-color: var(--bg-primary);
 }
 
 .loading {
@@ -33,6 +59,162 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+}
+
+/* Dark mode body and app backgrounds */
+[data-mantine-color-scheme="dark"] body {
+  background-color: var(--bg-primary);
+}
+
+[data-mantine-color-scheme="dark"] .app,
+[data-mantine-color-scheme="dark"] .main-content {
+  background-color: var(--bg-primary);
+}
+
+/* Mantine Component Dark Mode Overrides */
+[data-mantine-color-scheme="dark"] .mantine-Card-root {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Navbar-root {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Input-input,
+[data-mantine-color-scheme="dark"] .mantine-TextInput-input,
+[data-mantine-color-scheme="dark"] .mantine-NumberInput-input,
+[data-mantine-color-scheme="dark"] .mantine-PasswordInput-input,
+[data-mantine-color-scheme="dark"] .mantine-Select-input,
+[data-mantine-color-scheme="dark"] .mantine-Textarea-input {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Input-input::placeholder,
+[data-mantine-color-scheme="dark"] .mantine-TextInput-input::placeholder,
+[data-mantine-color-scheme="dark"] .mantine-NumberInput-input::placeholder,
+[data-mantine-color-scheme="dark"] .mantine-PasswordInput-input::placeholder,
+[data-mantine-color-scheme="dark"] .mantine-Select-input::placeholder,
+[data-mantine-color-scheme="dark"] .mantine-Textarea-input::placeholder {
+  color: var(--text-muted);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Select-dropdown,
+[data-mantine-color-scheme="dark"] .mantine-Popover-dropdown {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Select-option,
+[data-mantine-color-scheme="dark"] .mantine-Menu-item {
+  color: var(--text-primary);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Select-option:hover,
+[data-mantine-color-scheme="dark"] .mantine-Menu-item:hover {
+  background-color: var(--bg-tertiary);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Modal-content {
+  background-color: var(--bg-secondary);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Modal-header {
+  background-color: var(--bg-secondary);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Skeleton-root {
+  background-color: var(--bg-tertiary);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Alert-root {
+  border-color: var(--border-color);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Progress-root {
+  background-color: var(--bg-tertiary);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Tooltip-root {
+  background-color: var(--bg-secondary);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Drawer-root {
+  background-color: var(--bg-secondary);
+}
+
+/* Table styles for dark mode */
+[data-mantine-color-scheme="dark"] .mantine-Table-tr {
+  border-color: var(--border-color);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Table-th,
+[data-mantine-color-scheme="dark"] .mantine-Table-td {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+/* Badge styles */
+[data-mantine-color-scheme="dark"] .mantine-Badge-root {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Notification styles */
+[data-mantine-color-scheme="dark"] .mantine-Notification-root {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+/* Dropzone styles */
+[data-mantine-color-scheme="dark"] .mantine-Dropzone-root {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Dropzone-idle {
+  border-color: var(--border-color);
+}
+
+/* Segment control dark mode */
+[data-mantine-color-scheme="dark"] .mantine-SegmentedControl-root {
+  background-color: var(--bg-tertiary);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-SegmentedControl-indicator {
+  background-color: var(--bg-secondary);
+}
+
+/* Switch dark mode */
+[data-mantine-color-scheme="dark"] .mantine-Switch-track {
+  background-color: var(--bg-tertiary);
+}
+
+/* Tabs dark mode */
+[data-mantine-color-scheme="dark"] .mantine-Tabs-tab {
+  color: var(--text-secondary);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Tabs-tab:hover {
+  background-color: var(--bg-tertiary);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Tabs-tab[data-active] {
+  color: var(--text-primary);
+}
+
+/* App shell specific */
+[data-mantine-color-scheme="dark"] .mantine-AppShell-main {
+  background-color: var(--bg-primary);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-AppShell-header {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
 }
 
 /* Mobile responsive */
@@ -46,14 +228,29 @@ body {
   .main-content {
     padding: 12px;
   }
-}
-
-/* Prevent iOS zoom on inputs */
-@media (max-width: 768px) {
-  input, select, textarea {
-    font-size: 16px !important;
+  
+  .mantine-Card-root {
+    padding: 12px !important;
   }
   
+  .mantine-Table-root {
+    font-size: 14px;
+  }
+  
+  .scroll-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .mantine-Modal-content {
+    max-height: 100vh;
+  }
+  
+  .mantine-Stack-root {
+    gap: 12px !important;
+  }
+  
+  input, select, textarea,
   .mantine-Input-input,
   .mantine-TextInput-input,
   .mantine-NumberInput-input,
@@ -61,64 +258,23 @@ body {
     font-size: 16px !important;
   }
   
-  /* Larger touch targets */
   .mantine-Button-root {
     min-height: 44px;
     min-width: 44px;
   }
-  
-  /* Full width buttons on mobile */
-  .mantine-Button-root[data-fullwidth="true"] {
-    width: 100%;
-  }
 }
 
-/* Dark mode overrides */
-[data-mantine-color-scheme="dark"] {
-  background: #1a1a1a;
-  color: #e5e5e5;
-}
-
-[data-mantine-color-scheme="dark"] body {
-  background: #1a1a1a;
-}
-
-[data-mantine-color-scheme="dark"] .app,
-[data-mantine-color-scheme="dark"] .main-content {
-  background: #1a1a1a;
-}
-
-/* Improved card layouts on mobile */
-@media (max-width: 480px) {
-  .mantine-Card-root {
-    padding: 12px !important;
-  }
-  
-  /* Better table/list scroll on mobile */
-  .mantine-Table-root {
-    font-size: 14px;
-  }
-  
-  /* Scrollable containers */
-  .scroll-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  /* Modal full screen on mobile */
-  .mantine-Modal-content {
-    max-height: 100vh;
-  }
-  
-  /* Better form spacing on mobile */
-  .mantine-Stack-root {
-    gap: 12px !important;
+/* Prevent iOS zoom on inputs */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
   }
 }
 
 /* Smooth transitions */
 * {
   -webkit-tap-highlight-color: transparent;
+  transition: border-color 200ms ease, background-color 200ms ease;
 }
 
 /* Page transition animations */
@@ -168,23 +324,10 @@ body {
 
 .animated-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-}
-
-[data-mantine-color-scheme="dark"] .animated-card:hover {
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--hover-shadow);
 }
 
 /* Button scale effect */
-.btn-press {
-  transition: transform 100ms ease;
-}
-
-.btn-press:active {
-  transform: scale(0.97);
-}
-
-/* Apply to all Mantine buttons */
 .mantine-Button-root {
   transition: transform 100ms ease, box-shadow 150ms ease;
 }
@@ -247,15 +390,6 @@ body {
 
 .counter-animated {
   animation: countUp 500ms ease-out;
-}
-
-/* Hover scale for interactive elements */
-.hover-scale {
-  transition: transform 150ms ease;
-}
-
-.hover-scale:hover {
-  transform: scale(1.02);
 }
 
 /* Fade in animation */
