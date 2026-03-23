@@ -1,6 +1,6 @@
-import { MantineColorsTuple, createTheme } from '@mantine/core'
+import { createTheme } from '@mantine/core'
 
-const gray: MantineColorsTuple = [
+const gray = [
   '#f9fafb',
   '#f3f4f6',
   '#e5e7eb',
