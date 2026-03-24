@@ -9,13 +9,13 @@ import { AnimatedCounter } from './Animations'
 
 const CHART_COLORS = [colors.primary, colors.success, colors.danger, colors.warning, colors.purple, colors.cyan, '#14b8a6', '#f59e0b']
 
-const StatCard = ({ label, value, icon: Icon, color, delay = 0 }) => (
+const StatCard = ({ label, value, icon: Icon, color, delay = 0, prefix = '$' }) => (
   <Card shadow="sm" padding="md" radius="md" withBorder className="animated-card" style={{ animationDelay: `${delay}ms` }}>
     <Group justify="space-between" align="flex-start">
       <div style={{ minWidth: 0, flex: 1 }}>
         <Text size="xs" tt="uppercase" fw={600} c="dimmed">{label}</Text>
         <Text size="lg" fw={700} style={{ fontSize: '1.1rem', wordBreak: 'break-word' }}>
-          <AnimatedCounter value={value} prefix="$" />
+          <AnimatedCounter value={value} prefix={prefix} />
         </Text>
       </div>
       <div style={{
@@ -169,7 +169,7 @@ export default function Dashboard() {
         <StatCard label="Balance" value={totalBalance} icon={IconWallet} color="#475569" delay={0} />
         <StatCard label="Income" value={income} icon={IconArrowUpRight} color="#10b981" delay={50} />
         <StatCard label="Expenses" value={expenses} icon={IconArrowDownRight} color="#ef4444" delay={100} />
-        <StatCard label="Goals" value={activeGoals} icon={IconTarget} color="#d97706" delay={150} />
+        <StatCard label="Goals" value={activeGoals} icon={IconTarget} color="#d97706" delay={150} prefix="" />
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
