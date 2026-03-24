@@ -153,7 +153,7 @@ export default function Transactions() {
       if (accs.accounts?.length > 0) setFormData(prev => ({ ...prev, accountId: accs.accounts[0].id }))
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
-  }
+  }, [])
 
   const handleProcessRecurring = async (id) => {
     try {
