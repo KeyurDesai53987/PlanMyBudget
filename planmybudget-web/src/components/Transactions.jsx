@@ -119,9 +119,6 @@ export default function Transactions() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [quickAmount, setQuickAmount] = useState('')
-  const [quickType, setQuickType] = useState('expense')
-  const [quickCategory, setQuickCategory] = useState('')
   const [editModal, setEditModal] = useState({ open: false, txn: null })
   const [datePreset, setDatePreset] = useState('year')
   const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' })
@@ -160,21 +157,6 @@ export default function Transactions() {
       await api(`/recurring/${id}/process`, { method: 'POST' })
       loadData()
     } catch (err) { alert(err.message) }
-  }
-
-  const handleQuickAdd = async (e) => {
-    e.preventDefault()
-    if (!quickAmount || !formData.accountId) return
-    setSubmitting(true)
-    try {
-      const amount = parseFloat(quickAmount)
-      const type = quickType === 'expense' ? 'debit' : 'credit'
-      await api('/transactions', { method: 'POST', body: JSON.stringify({ accountId: formData.accountId, date: new Date().toISOString().split('T')[0], amount, type, description: quickType, categoryId: quickCategory || null }) })
-      setQuickAmount('')
-      setQuickCategory('')
-      loadData()
-    } catch (err) { alert(err.message) }
-    finally { setSubmitting(false) }
   }
 
   const handleSubmit = async (e) => {
@@ -397,49 +379,6 @@ export default function Transactions() {
           )}
         </Stack>
       </Card>
-
-      {accounts.length > 0 && (
-        <Card shadow="sm" padding="sm" radius="md" withBorder mb="md">
-          <form onSubmit={handleQuickAdd}>
-            <Stack gap="sm">
-              <SegmentedControl
-                size="sm"
-                value={quickType}
-                onChange={setQuickType}
-                data={[
-                  { label: 'Expense', value: 'expense' },
-                  { label: 'Income', value: 'income' },
-                ]}
-                fullWidth
-              />
-              <Group gap="xs" align="flex-end" wrap="wrap">
-                <NumberInput
-                  placeholder="Amount"
-                  value={quickAmount}
-                  onChange={setQuickAmount}
-                  min={0}
-                  decimalScale={2}
-                  style={{ flex: 1, minWidth: 80 }}
-                  hideControls
-                  size="sm"
-                />
-                <Select
-                  placeholder="Category"
-                  data={categories.map(c => ({ value: c.id, label: c.name }))}
-                  value={quickCategory}
-                  onChange={setQuickCategory}
-                  clearable
-                  style={{ flex: 1, minWidth: 100 }}
-                  size="sm"
-                />
-                <Button type="submit" size="sm" color="gray" loading={submitting} disabled={!quickAmount}>
-                  Add
-                </Button>
-              </Group>
-            </Stack>
-          </form>
-        </Card>
-      )}
 
       {recurring.filter(r => r.active).length > 0 && (
         <Card shadow="sm" padding="sm" radius="md" withBorder mb="md" style={{ background: isDark ? '#252525' : '#f8fafc' }}>
