@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, SegmentedControl, ActionIcon, Modal, Menu, Badge, Divider, Box, Transition } from '@mantine/core'
+import { useDebouncedValue } from '@mantine/hooks'
 import { IconPlus, IconTrash, IconArrowUpRight, IconArrowDownRight, IconEdit, IconDownload, IconRepeat, IconPlayerPlay, IconTag, IconSearch, IconX } from '@tabler/icons-react'
 import { api } from '../api'
 import { useMantineColorScheme } from '@mantine/core'
@@ -132,6 +133,8 @@ export default function Transactions() {
     accountId: '', date: new Date().toISOString().split('T')[0], amount: '', type: 'debit', description: '', categoryId: ''
   })
 
+  const [debouncedSearch] = useDebouncedValue(searchQuery, 300)
+
   useEffect(() => { loadData() }, [])
 
   useEffect(() => {
@@ -140,7 +143,7 @@ export default function Transactions() {
     }
   }, [showSearch])
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [txns, accs, rec, cats] = await Promise.all([api('/transactions'), api('/accounts'), api('/recurring'), api('/categories')])
       setTransactions(txns.transactions || [])
@@ -251,8 +254,8 @@ export default function Transactions() {
         if (typeFilter === 'income' && t.amount < 0) return false
         if (typeFilter === 'expense' && t.amount >= 0) return false
       }
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase()
+      if (debouncedSearch) {
+        const query = debouncedSearch.toLowerCase()
         const categoryName = categories.find(c => c.id === t.categoryId)?.name?.toLowerCase() || ''
         const searchText = `${t.description || ''} ${categoryName}`.toLowerCase()
         if (!searchText.includes(query)) return false

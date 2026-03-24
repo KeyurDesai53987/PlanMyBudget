@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Card, Group, Text, Stack, SimpleGrid, useMantineColorScheme } from '@mantine/core'
 import { IconArrowUpRight, IconArrowDownRight, IconWallet, IconTarget } from '@tabler/icons-react'
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
@@ -9,32 +9,30 @@ import { AnimatedCounter } from './Animations'
 
 const CHART_COLORS = [colors.primary, colors.success, colors.danger, colors.warning, colors.purple, colors.cyan, '#14b8a6', '#f59e0b']
 
-function StatCard({ label, value, icon: Icon, color, delay = 0 }) {
-  return (
-    <Card shadow="sm" padding="md" radius="md" withBorder className="animated-card" style={{ animationDelay: `${delay}ms` }}>
-      <Group justify="space-between" align="flex-start">
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <Text size="xs" tt="uppercase" fw={600} c="dimmed">{label}</Text>
-          <Text size="lg" fw={700} style={{ fontSize: '1.1rem', wordBreak: 'break-word' }}>
-            <AnimatedCounter value={value} prefix="$" />
-          </Text>
-        </div>
-        <div style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          background: `${color}15`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0
-        }}>
-          <Icon size={18} style={{ color }} />
-        </div>
-      </Group>
-    </Card>
-  )
-}
+const StatCard = ({ label, value, icon: Icon, color, delay = 0 }) => (
+  <Card shadow="sm" padding="md" radius="md" withBorder className="animated-card" style={{ animationDelay: `${delay}ms` }}>
+    <Group justify="space-between" align="flex-start">
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <Text size="xs" tt="uppercase" fw={600} c="dimmed">{label}</Text>
+        <Text size="lg" fw={700} style={{ fontSize: '1.1rem', wordBreak: 'break-word' }}>
+          <AnimatedCounter value={value} prefix="$" />
+        </Text>
+      </div>
+      <div style={{
+        width: 36,
+        height: 36,
+        borderRadius: 8,
+        background: `${color}15`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0
+      }}>
+        <Icon size={18} style={{ color }} />
+      </div>
+    </Group>
+  </Card>
+)
 
 export default function Dashboard() {
   const { colorScheme } = useMantineColorScheme()
@@ -47,98 +45,119 @@ export default function Dashboard() {
 
   useEffect(() => { loadData() }, [])
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const [accs, txns, gls, cats] = await Promise.all([api('/accounts'), api('/transactions'), api('/goals'), api('/categories')])
+      const [accs, txns, gls, cats] = await Promise.all([
+        api('/accounts'), 
+        api('/transactions'), 
+        api('/goals'), 
+        api('/categories')
+      ])
       setAccounts(accs.accounts || [])
       setTransactions(txns.transactions || [])
       setGoals(gls.goals || [])
       setCategories(cats.categories || [])
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
-  }
+  }, [])
 
-  const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0)
-  const income = transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0)
-  const expenses = transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0)
+  const totalBalance = useMemo(() => 
+    accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0), 
+  [accounts])
 
-  const recentTransactions = [...transactions].sort((a, b) => {
-    const dateA = new Date(a.date)
-    const dateB = new Date(b.date)
-    if (isNaN(dateA.getTime())) return 1
-    if (isNaN(dateB.getTime())) return -1
-    return dateB - dateA
-  }).slice(0, 5)
+  const income = useMemo(() => 
+    transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0), 
+  [transactions])
 
-  const incomeVsExpenseData = [
+  const expenses = useMemo(() => 
+    transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0), 
+  [transactions])
+
+  const activeGoals = useMemo(() => 
+    goals.filter(g => g.status === 'active').length, 
+  [goals])
+
+  const recentTransactions = useMemo(() => {
+    return [...transactions]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 5)
+  }, [transactions])
+
+  const incomeVsExpenseData = useMemo(() => [
     { name: 'Income', value: income },
     { name: 'Expenses', value: expenses }
-  ].filter(d => d.value > 0)
-  
+  ].filter(d => d.value > 0), [income, expenses])
+
   const incomeVsExpenseTotal = income + expenses
 
-  const last7Days = [...Array(7)].map((_, i) => {
-    const date = new Date()
-    date.setDate(date.getDate() - (6 - i))
-    return date.toISOString().split('T')[0]
-  })
-
-  const dailyData = last7Days.map(date => {
-    const dayTxns = transactions.filter(t => t.date === date)
-    const dayIncome = dayTxns.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0)
-    const dayExp = dayTxns.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0)
-    return {
-      date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
-      income: dayIncome,
-      expenses: dayExp
-    }
-  })
-
-  const categoryMap = categories.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {})
-
-  const categoryData = transactions
-    .filter(t => t.amount < 0 && t.categoryId)
-    .reduce((acc, t) => {
-      const name = categoryMap[t.categoryId] || 'Other'
-      const existing = acc.find(d => d.name === name)
-      if (existing) {
-        existing.amount += Math.abs(t.amount)
-      } else {
-        acc.push({ name, amount: Math.abs(t.amount) })
-      }
-      return acc
-    }, [])
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, 6)
-
-  const accountData = accounts
-    .filter(a => a.balance !== 0)
-    .map(a => ({ name: a.name, value: a.balance }))
-    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-    .slice(0, 6)
-
-  const monthlyData = [...Array(6)].map((_, i) => {
-    const date = new Date()
-    date.setMonth(date.getMonth() - (5 - i))
-    const month = date.getMonth()
-    const year = date.getFullYear()
-    const monthTxns = transactions.filter(t => {
-      const txnDate = new Date(t.date)
-      return txnDate.getMonth() === month && txnDate.getFullYear() === year
+  const dailyData = useMemo(() => {
+    const last7Days = [...Array(7)].map((_, i) => {
+      const date = new Date()
+      date.setDate(date.getDate() - (6 - i))
+      return date.toISOString().split('T')[0]
     })
-    return {
-      name: date.toLocaleDateString('en-US', { month: 'short' }),
-      income: monthTxns.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0),
-      expenses: monthTxns.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0)
-    }
-  })
+    return last7Days.map(date => {
+      const dayTxns = transactions.filter(t => t.date === date)
+      return {
+        date: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+        income: dayTxns.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0),
+        expenses: dayTxns.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0)
+      }
+    })
+  }, [transactions])
 
-  const savingsData = monthlyData.map(d => ({
-    name: d.name,
-    savings: d.income - d.expenses
-  })).filter(d => d.savings !== 0)
+  const categoryMap = useMemo(() => 
+    categories.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {}), 
+  [categories])
 
-  const activeGoals = goals.filter(g => g.status === 'active').length
+  const categoryData = useMemo(() => {
+    return transactions
+      .filter(t => t.amount < 0 && t.categoryId)
+      .reduce((acc, t) => {
+        const name = categoryMap[t.categoryId] || 'Other'
+        const existing = acc.find(d => d.name === name)
+        if (existing) {
+          existing.amount += Math.abs(t.amount)
+        } else {
+          acc.push({ name, amount: Math.abs(t.amount) })
+        }
+        return acc
+      }, [])
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 6)
+  }, [transactions, categoryMap])
+
+  const accountData = useMemo(() => 
+    accounts
+      .filter(a => a.balance !== 0)
+      .map(a => ({ name: a.name, value: a.balance }))
+      .slice(0, 6), 
+  [accounts])
+
+  const monthlyData = useMemo(() => {
+    return [...Array(6)].map((_, i) => {
+      const date = new Date()
+      date.setMonth(date.getMonth() - (5 - i))
+      const month = date.getMonth()
+      const year = date.getFullYear()
+      const monthTxns = transactions.filter(t => {
+        const txnDate = new Date(t.date)
+        return txnDate.getMonth() === month && txnDate.getFullYear() === year
+      })
+      return {
+        name: date.toLocaleDateString('en-US', { month: 'short' }),
+        income: monthTxns.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0),
+        expenses: monthTxns.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0)
+      }
+    })
+  }, [transactions])
+
+  const savingsData = useMemo(() => 
+    monthlyData.map(d => ({
+      name: d.name,
+      savings: d.income - d.expenses
+    })).filter(d => d.savings !== 0), 
+  [monthlyData])
 
   if (loading) return <DashboardSkeleton />
 
