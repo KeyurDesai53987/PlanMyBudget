@@ -604,7 +604,7 @@ export default function Settings() {
             </Group>
             <Group gap="xs">
               <Text size="sm"><strong>Contact:</strong></Text>
-              <Text size="sm" c="dimmed">keyurdesai@icloud.com</Text>
+              <Text size="sm" c="dimmed">keyurdesai833@gmail.com</Text>
             </Group>
           </Stack>
         </Card>
