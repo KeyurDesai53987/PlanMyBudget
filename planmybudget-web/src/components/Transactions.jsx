@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, SegmentedControl, ActionIcon, Modal, Menu, Badge, Divider } from '@mantine/core'
-import { IconPlus, IconTrash, IconArrowUpRight, IconArrowDownRight, IconEdit, IconDownload, IconRepeat, IconPlayerPlay, IconTag, IconSearch } from '@tabler/icons-react'
+import { useState, useEffect, useRef } from 'react'
+import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, SegmentedControl, ActionIcon, Modal, Menu, Badge, Divider, Box, Transition } from '@mantine/core'
+import { IconPlus, IconTrash, IconArrowUpRight, IconArrowDownRight, IconEdit, IconDownload, IconRepeat, IconPlayerPlay, IconTag, IconSearch, IconX } from '@tabler/icons-react'
 import { api } from '../api'
 import { useMantineColorScheme } from '@mantine/core'
 import { colors } from '../theme'
@@ -13,6 +13,12 @@ const DATE_PRESETS = [
   { label: 'This Week', value: 'week' },
   { label: 'This Month', value: 'month' },
   { label: 'This Year', value: 'year' },
+]
+
+const TYPE_FILTERS = [
+  { label: 'All', value: 'all' },
+  { label: 'Income', value: 'income' },
+  { label: 'Expense', value: 'expense' },
 ]
 
 function exportToCSV(transactions, accounts, categories) {
@@ -120,13 +126,22 @@ export default function Transactions() {
   const [datePreset, setDatePreset] = useState('year')
   const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' })
   const [searchQuery, setSearchQuery] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
+  const [typeFilter, setTypeFilter] = useState('all')
   const [pageSize, setPageSize] = useState(25)
   const [currentPage, setCurrentPage] = useState(1)
+  const searchInputRef = useRef(null)
   const [formData, setFormData] = useState({
     accountId: '', date: new Date().toISOString().split('T')[0], amount: '', type: 'debit', description: '', categoryId: ''
   })
 
   useEffect(() => { loadData() }, [])
+
+  useEffect(() => {
+    if (showSearch && searchInputRef.current) {
+      searchInputRef.current.focus()
+    }
+  }, [showSearch])
 
   const loadData = async () => {
     try {
@@ -250,6 +265,10 @@ export default function Transactions() {
     return transactions.filter(t => {
       if (startDate && t.date < startDate) return false
       if (endDate && t.date > endDate) return false
+      if (typeFilter !== 'all') {
+        if (typeFilter === 'income' && t.amount < 0) return false
+        if (typeFilter === 'expense' && t.amount >= 0) return false
+      }
       if (searchQuery) {
         const query = searchQuery.toLowerCase()
         const categoryName = categories.find(c => c.id === t.categoryId)?.name?.toLowerCase() || ''
@@ -273,7 +292,7 @@ export default function Transactions() {
   
   const totalPages = pageSize === 'all' ? 1 : Math.ceil(sortedTransactions.length / pageSize)
 
-  useEffect(() => { setCurrentPage(1) }, [datePreset, customDateRange, pageSize])
+  useEffect(() => { setCurrentPage(1) }, [datePreset, customDateRange, pageSize, typeFilter, searchQuery])
 
   if (loading) return <TransactionsSkeleton />
 
@@ -306,21 +325,55 @@ export default function Transactions() {
 
       <Card shadow="sm" padding="sm" radius="md" withBorder mb="md">
         <Stack gap="sm">
-          <TextInput
-            placeholder="Search..."
-            leftSection={<IconSearch size={14} />}
-            value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1) }}
-            style={{ width: '100%' }}
-            size="sm"
-          />
+          <Group justify="space-between" wrap="nowrap">
+            <SegmentedControl
+              size="sm"
+              value={datePreset}
+              onChange={(val) => { setDatePreset(val); if (val !== 'all') setCustomDateRange({ start: '', end: '' }) }}
+              data={DATE_PRESETS}
+              style={{ flex: 1 }}
+            />
+            <ActionIcon
+              variant={showSearch ? 'filled' : 'subtle'}
+              color="gray"
+              size="lg"
+              onClick={() => setShowSearch(!showSearch)}
+              ml="xs"
+            >
+              {showSearch ? <IconX size={18} /> : <IconSearch size={18} />}
+            </ActionIcon>
+          </Group>
+          
+          <Transition mounted={showSearch} transition="pop-bottom-left" duration={200}>
+            {(styles) => (
+              <Box style={styles}>
+                <TextInput
+                  placeholder="Search transactions..."
+                  leftSection={<IconSearch size={14} />}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  size="sm"
+                  ref={searchInputRef}
+                  rightSection={
+                    searchQuery ? (
+                      <ActionIcon size="xs" variant="subtle" color="gray" onClick={() => setSearchQuery('')}>
+                        <IconX size={12} />
+                      </ActionIcon>
+                    ) : null
+                  }
+                />
+              </Box>
+            )}
+          </Transition>
+          
           <SegmentedControl
-            size="sm"
-            value={datePreset}
-            onChange={(val) => { setDatePreset(val); if (val !== 'all') setCustomDateRange({ start: '', end: '' }) }}
-            data={DATE_PRESETS}
+            size="xs"
+            value={typeFilter}
+            onChange={setTypeFilter}
+            data={TYPE_FILTERS}
             fullWidth
           />
+          
           {datePreset === 'all' && (
             <Group gap="xs">
               <TextInput
