@@ -15,6 +15,7 @@ const Budgets = lazy(() => import('./components/Budgets'))
 const Goals = lazy(() => import('./components/Goals'))
 const Recurring = lazy(() => import('./components/Recurring'))
 const Categories = lazy(() => import('./components/Categories'))
+const Reminders = lazy(() => import('./components/Reminders'))
 const Settings = lazy(() => import('./components/Settings'))
 
 function PageLoader() {
@@ -75,6 +76,7 @@ function App() {
                 <Route path="/budgets" element={<Budgets />} />
                 <Route path="/goals" element={<Goals />} />
                 <Route path="/recurring" element={<Recurring />} />
+                <Route path="/reminders" element={<Reminders />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

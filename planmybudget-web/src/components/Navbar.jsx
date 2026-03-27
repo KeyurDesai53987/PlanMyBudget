@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Group, Button, Text, Box, ActionIcon, Drawer, Stack, useMantineColorScheme, Burger, Avatar, Menu, Divider, Image } from '@mantine/core'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
-import { IconLogout, IconMoon, IconSun, IconHome, IconBuildingBank, IconCreditCard, IconChartBar, IconTarget, IconRepeat, IconTag, IconSettings, IconUser, IconChevronDown } from '@tabler/icons-react'
+import { IconLogout, IconMoon, IconSun, IconHome, IconBuildingBank, IconCreditCard, IconChartBar, IconTarget, IconRepeat, IconTag, IconSettings, IconUser, IconChevronDown, IconBell } from '@tabler/icons-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { colors } from '../theme'
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/budgets', label: 'Budget', icon: IconChartBar },
   { to: '/goals', label: 'Goals', icon: IconTarget },
   { to: '/recurring', label: 'Recurring', icon: IconRepeat },
+  { to: '/reminders', label: 'Reminders', icon: IconBell },
   { to: '/categories', label: 'Categories', icon: IconTag },
 ]
 

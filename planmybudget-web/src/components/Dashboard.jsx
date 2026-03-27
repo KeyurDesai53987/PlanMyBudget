@@ -77,7 +77,7 @@ export default function Dashboard() {
   [goals])
 
   const totalSavings = useMemo(() => 
-    income - expenses, 
+    Math.max(0, income - expenses), 
   [income, expenses])
 
   const thisMonth = useMemo(() => {
@@ -196,7 +196,7 @@ export default function Dashboard() {
         <StatCard label="Balance" value={totalBalance} icon={IconWallet} color="#475569" />
         <StatCard label="Income" value={income} icon={IconArrowUpRight} color="#10b981" />
         <StatCard label="Expenses" value={expenses} icon={IconArrowDownRight} color="#ef4444" />
-        <StatCard label="Savings" value={totalSavings} icon={IconPigMoney} color={totalSavings >= 0 ? '#10b981' : '#ef4444'} />
+        <StatCard label="Savings" value={totalSavings} icon={IconPigMoney} color="#10b981" />
       </SimpleGrid>
 
       <Card shadow="sm" padding="lg" radius="md" withBorder mb="xl">
@@ -212,8 +212,8 @@ export default function Dashboard() {
           </Card>
           <Card shadow="sm" padding="md" radius="md" withBorder>
             <Text size="xs" tt="uppercase" fw={600} c="dimmed">Saved</Text>
-            <Text size="lg" fw={700} c={thisMonth.savings >= 0 ? '#10b981' : '#ef4444'}>
-              ${thisMonth.savings.toLocaleString()}
+            <Text size="lg" fw={700} c="#10b981">
+              ${Math.max(0, thisMonth.savings).toLocaleString()}
             </Text>
           </Card>
         </SimpleGrid>

@@ -191,3 +191,24 @@ export function RecurringSkeleton() {
     </div>
   )
 }
+
+export function RemindersSkeleton() {
+  return (
+    <div>
+      <ShimmerSkeleton height={32} width={150} mb="lg" />
+      <Stack gap="md">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} shadow="sm" padding="md" radius="md" withBorder >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <ShimmerSkeleton height={16} width={160} mb={4} />
+                <ShimmerSkeleton height={12} width={120} />
+              </div>
+              <ShimmerSkeleton height={24} width={60} />
+            </div>
+          </Card>
+        ))}
+      </Stack>
+    </div>
+  )
+}

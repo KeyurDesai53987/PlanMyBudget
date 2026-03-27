@@ -458,6 +458,23 @@ async function initDb() {
     )
   `)
 
+  await db.run(`
+    CREATE TABLE IF NOT EXISTS reminders (
+      id TEXT PRIMARY KEY,
+      userid TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      duedate TEXT NOT NULL,
+      amount REAL,
+      category TEXT NOT NULL,
+      recurring TEXT,
+      paid INTEGER DEFAULT 0,
+      notify INTEGER DEFAULT 1,
+      createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (userid) REFERENCES users(id)
+    )
+  `)
+
   // Create indexes for better query performance
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
@@ -1486,6 +1503,72 @@ app.post('/api/recurring/:id/process', auth, async (req, res) => {
   await db.run('UPDATE recurring SET nextdate = $1 WHERE id = $2', [nextdate, id])
   
   res.json({ transaction: txn, accountBalance: newBalance })
+})
+
+// Reminders API
+app.get('/api/reminders', auth, async (req, res) => {
+  const rows = await db.all('SELECT * FROM reminders WHERE userid = $1 ORDER BY duedate ASC', [req.userid])
+  const reminders = rows.map(r => ({
+    id: r.id,
+    userId: r.userid,
+    title: r.title,
+    description: r.description,
+    dueDate: r.duedate,
+    amount: r.amount,
+    category: r.category,
+    recurring: r.recurring,
+    paid: !!r.paid,
+    notify: !!r.notify,
+    createdAt: r.createdat
+  }))
+  res.json({ reminders })
+})
+
+app.post('/api/reminders', auth, async (req, res) => {
+  const { title, description, dueDate, amount, category, recurring, notify } = req.body || {}
+  if (!title || !dueDate || !category) return res.status(400).json({ error: 'title, dueDate, category required' })
+  
+  const reminder = {
+    id: uuidv4(),
+    userid: req.userid,
+    title,
+    description: description || '',
+    duedate: dueDate,
+    amount: amount || 0,
+    category,
+    recurring: recurring || null,
+    paid: 0,
+    notify: notify !== false ? 1 : 0
+  }
+  
+  await db.run(`
+    INSERT INTO reminders (id, userid, title, description, duedate, amount, category, recurring, paid, notify)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+  `, [reminder.id, reminder.userid, reminder.title, reminder.description, reminder.duedate, reminder.amount, reminder.category, reminder.recurring, reminder.paid, reminder.notify])
+  
+  res.json({ reminder })
+})
+
+app.put('/api/reminders/:id', auth, async (req, res) => {
+  const { id } = req.params
+  const { title, description, dueDate, amount, category, recurring, paid, notify } = req.body || {}
+  
+  const existing = await db.get('SELECT * FROM reminders WHERE id = $1 AND userid = $2', [id, req.userid])
+  if (!existing) return res.status(404).json({ error: 'Reminder not found' })
+  
+  await db.run(`
+    UPDATE reminders SET 
+      title = $1, description = $2, duedate = $3, amount = $4, category = $5, recurring = $6, paid = $7, notify = $8
+    WHERE id = $9 AND userid = $10
+  `, [title || existing.title, description ?? existing.description, dueDate || existing.duedate, amount ?? existing.amount, category || existing.category, recurring ?? existing.recurring, paid !== undefined ? (paid ? 1 : 0) : existing.paid, notify !== undefined ? (notify ? 1 : 0) : existing.notify, id, req.userid])
+  
+  res.json({ success: true })
+})
+
+app.delete('/api/reminders/:id', auth, async (req, res) => {
+  const { id } = req.params
+  await db.run('DELETE FROM reminders WHERE id = $1 AND userid = $2', [id, req.userid])
+  res.json({ success: true })
 })
 
 // Health check
