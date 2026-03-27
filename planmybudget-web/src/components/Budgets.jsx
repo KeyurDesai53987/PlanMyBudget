@@ -254,7 +254,7 @@ export default function Budgets() {
                          (new Date().getFullYear() === budget.year && new Date().getMonth() + 1 > budget.month)
           
           return (
-            <Card key={budget.id} shadow="sm" padding="md" radius="md" withBorder >>
+            <Card key={budget.id} shadow="sm" padding="md" radius="md" withBorder className="animated-card">>
               <Group justify="space-between" mb={isExpanded ? "sm" : 0}>
                 <Group gap="xs">
                   <ActionIcon 
