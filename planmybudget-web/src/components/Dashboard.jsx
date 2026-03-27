@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Card, Group, Text, Stack, SimpleGrid, useMantineColorScheme } from '@mantine/core'
-import { IconArrowUpRight, IconArrowDownRight, IconWallet, IconTarget } from '@tabler/icons-react'
+import { IconArrowUpRight, IconArrowDownRight, IconWallet, IconTarget, IconPigMoney, IconTrendingUp } from '@tabler/icons-react'
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { api } from '../api'
 import { colors } from '../theme'
@@ -74,6 +74,34 @@ export default function Dashboard() {
 
   const activeGoals = useMemo(() => 
     goals.filter(g => g.status === 'active').length, 
+  [goals])
+
+  const totalSavings = useMemo(() => 
+    income - expenses, 
+  [income, expenses])
+
+  const thisMonth = useMemo(() => {
+    const now = new Date()
+    const monthTxns = transactions.filter(t => {
+      const txnDate = new Date(t.date)
+      return txnDate.getMonth() === now.getMonth() && txnDate.getFullYear() === now.getFullYear()
+    })
+    const monthIncome = monthTxns.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0)
+    const monthExpenses = monthTxns.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0)
+    return {
+      income: monthIncome,
+      expenses: monthExpenses,
+      savings: monthIncome - monthExpenses
+    }
+  }, [transactions])
+
+  const goalSavings = useMemo(() => 
+    goals.map(g => ({
+      name: g.name,
+      current: g.currentAmount || 0,
+      target: g.targetAmount || 0,
+      progress: g.targetAmount ? ((g.currentAmount || 0) / g.targetAmount) * 100 : 0
+    })),
   [goals])
 
   const recentTransactions = useMemo(() => {
@@ -168,8 +196,28 @@ export default function Dashboard() {
         <StatCard label="Balance" value={totalBalance} icon={IconWallet} color="#475569" />
         <StatCard label="Income" value={income} icon={IconArrowUpRight} color="#10b981" />
         <StatCard label="Expenses" value={expenses} icon={IconArrowDownRight} color="#ef4444" />
-        <StatCard label="Goals" value={activeGoals} icon={IconTarget} color="#d97706" prefix="" />
+        <StatCard label="Savings" value={totalSavings} icon={IconPigMoney} color={totalSavings >= 0 ? '#10b981' : '#ef4444'} />
       </SimpleGrid>
+
+      <Card shadow="sm" padding="lg" radius="md" withBorder mb="xl">
+        <Text fw={600} mb="md">This Month ({new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })})</Text>
+        <SimpleGrid cols={{ base: 3, sm: 3 }}>
+          <Card shadow="sm" padding="md" radius="md" withBorder>
+            <Text size="xs" tt="uppercase" fw={600} c="dimmed">Income</Text>
+            <Text size="lg" fw={700} c="#10b981">${thisMonth.income.toLocaleString()}</Text>
+          </Card>
+          <Card shadow="sm" padding="md" radius="md" withBorder>
+            <Text size="xs" tt="uppercase" fw={600} c="dimmed">Spent</Text>
+            <Text size="lg" fw={700} c="#ef4444">-${thisMonth.expenses.toLocaleString()}</Text>
+          </Card>
+          <Card shadow="sm" padding="md" radius="md" withBorder>
+            <Text size="xs" tt="uppercase" fw={600} c="dimmed">Saved</Text>
+            <Text size="lg" fw={700} c={thisMonth.savings >= 0 ? '#10b981' : '#ef4444'}>
+              ${thisMonth.savings.toLocaleString()}
+            </Text>
+          </Card>
+        </SimpleGrid>
+      </Card>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
         <Card shadow="sm" padding="lg" radius="md" withBorder>
@@ -311,6 +359,41 @@ export default function Dashboard() {
           )}
         </Card>
       </SimpleGrid>
+
+      {goalSavings.length > 0 && (
+        <Card shadow="sm" padding="lg" radius="md" withBorder mt="md">
+          <Text fw={600} mb="md">Goals Progress</Text>
+          <Stack gap="md">
+            {goalSavings.map((goal) => (
+              <div key={goal.name}>
+                <Group justify="space-between" mb={4}>
+                  <Text size="sm" fw={500}>{goal.name}</Text>
+                  <Text size="sm" fw={600} c={goal.progress >= 100 ? 'green' : 'blue'}>
+                    ${goal.current.toLocaleString()} / ${goal.target.toLocaleString()}
+                  </Text>
+                </Group>
+                <div style={{ 
+                  height: 8, 
+                  background: isDark ? '#334155' : '#e2e8f0', 
+                  borderRadius: 4,
+                  overflow: 'hidden'
+                }}>
+                  <div style={{ 
+                    height: '100%', 
+                    width: `${Math.min(goal.progress, 100)}%`,
+                    background: goal.progress >= 100 ? colors.success : colors.primary,
+                    borderRadius: 4,
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+                <Text size="xs" c="dimmed" mt={4}>
+                  {goal.progress >= 100 ? '🎉 Goal reached!' : `$${(goal.target - goal.current).toLocaleString()} remaining`}
+                </Text>
+              </div>
+            ))}
+          </Stack>
+        </Card>
+      )}
 
       <Card shadow="sm" padding="lg" radius="md" withBorder mt="md">
         <Text fw={600} mb="md">Recent Activity</Text>
