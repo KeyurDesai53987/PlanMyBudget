@@ -172,7 +172,7 @@ export default function Dashboard() {
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card">
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Text fw={600} mb="md">Income vs Expenses</Text>
           {incomeVsExpenseData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -208,7 +208,7 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card">
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Text fw={600} mb="md">Last 7 Days</Text>
           {dailyData.some(d => d.income > 0 || d.expenses > 0) ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -232,7 +232,7 @@ export default function Dashboard() {
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card">
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Text fw={600} mb="md">Balance by Account</Text>
           {accountData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -268,7 +268,7 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card">>
+        <Card shadow="sm" padding="lg" radius="md" withBorder >>
           <Text fw={600} mb="md">Monthly Trend</Text>
           {monthlyData.some(d => d.income > 0 || d.expenses > 0) ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -291,7 +291,7 @@ export default function Dashboard() {
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card">
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Text fw={600} mb="md">Monthly Savings</Text>
           {savingsData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>

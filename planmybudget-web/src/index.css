@@ -276,23 +276,43 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Card hover effects */
-.animated-card {
-  transition: transform 200ms ease, box-shadow 200ms ease;
-}
-
+/* Subtle card hover effects - removed for performance */
+/*
 .animated-card:hover {
-  transform: translateY(-2px);
   box-shadow: var(--hover-shadow);
 }
+*/
 
-/* Button scale effect */
-.mantine-Button-root:active:not(:disabled) {
-  transform: scale(0.98);
+/* Shimmer animation for skeletons - subtle */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
-.mantine-ActionIcon-root:active:not(:disabled) {
-  transform: scale(0.92);
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+[data-mantine-color-scheme="dark"] .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
 }
 
 /* Better scroll behavior */
