@@ -5,17 +5,16 @@ import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tool
 import { api } from '../api'
 import { colors } from '../theme'
 import { DashboardSkeleton } from './Skeletons'
-import { AnimatedCounter } from './Animations'
 
 const CHART_COLORS = [colors.primary, colors.success, colors.danger, colors.warning, colors.purple, colors.cyan, '#14b8a6', '#f59e0b']
 
-const StatCard = ({ label, value, icon: Icon, color, delay = 0, prefix = '$' }) => (
-  <Card shadow="sm" padding="md" radius="md" withBorder className="animated-card" style={{ animationDelay: `${delay}ms` }}>
+const StatCard = ({ label, value, icon: Icon, color, prefix = '$' }) => (
+  <Card shadow="sm" padding="md" radius="md" withBorder>
     <Group justify="space-between" align="flex-start">
       <div style={{ minWidth: 0, flex: 1 }}>
         <Text size="xs" tt="uppercase" fw={600} c="dimmed">{label}</Text>
         <Text size="lg" fw={700} style={{ fontSize: '1.1rem', wordBreak: 'break-word' }}>
-          <AnimatedCounter value={value} prefix={prefix} />
+          {prefix}{typeof value === 'number' ? value.toLocaleString() : value}
         </Text>
       </div>
       <div style={{
@@ -166,14 +165,14 @@ export default function Dashboard() {
       <Text size="xl" fw={700} mb="lg" style={{ fontSize: '1.5rem' }}>Dashboard</Text>
       
       <SimpleGrid cols={{ base: 2, sm: 4 }} mb="xl">
-        <StatCard label="Balance" value={totalBalance} icon={IconWallet} color="#475569" delay={0} />
-        <StatCard label="Income" value={income} icon={IconArrowUpRight} color="#10b981" delay={50} />
-        <StatCard label="Expenses" value={expenses} icon={IconArrowDownRight} color="#ef4444" delay={100} />
-        <StatCard label="Goals" value={activeGoals} icon={IconTarget} color="#d97706" delay={150} prefix="" />
+        <StatCard label="Balance" value={totalBalance} icon={IconWallet} color="#475569" />
+        <StatCard label="Income" value={income} icon={IconArrowUpRight} color="#10b981" />
+        <StatCard label="Expenses" value={expenses} icon={IconArrowDownRight} color="#ef4444" />
+        <StatCard label="Goals" value={activeGoals} icon={IconTarget} color="#d97706" prefix="" />
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card" style={{ animationDelay: '200ms' }}>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Text fw={600} mb="md">Income vs Expenses</Text>
           {incomeVsExpenseData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -209,7 +208,7 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card" style={{ animationDelay: '250ms' }}>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Text fw={600} mb="md">Last 7 Days</Text>
           {dailyData.some(d => d.income > 0 || d.expenses > 0) ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -233,7 +232,7 @@ export default function Dashboard() {
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card" style={{ animationDelay: '300ms' }}>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Text fw={600} mb="md">Balance by Account</Text>
           {accountData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -269,7 +268,7 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card" style={{ animationDelay: '350ms' }}>
+        <Card shadow="sm" padding="lg" radius="md" withBorder >>
           <Text fw={600} mb="md">Monthly Trend</Text>
           {monthlyData.some(d => d.income > 0 || d.expenses > 0) ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -292,7 +291,7 @@ export default function Dashboard() {
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card" style={{ animationDelay: '400ms' }}>
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Text fw={600} mb="md">Monthly Savings</Text>
           {savingsData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -313,12 +312,12 @@ export default function Dashboard() {
         </Card>
       </SimpleGrid>
 
-      <Card shadow="sm" padding="lg" radius="md" withBorder mt="md" className="animated-card" style={{ animationDelay: '450ms' }}>
+      <Card shadow="sm" padding="lg" radius="md" withBorder mt="md">
         <Text fw={600} mb="md">Recent Activity</Text>
         {recentTransactions.length > 0 ? (
           <Stack gap="sm">
-            {recentTransactions.map((t, i) => (
-              <Group key={t.id} justify="space-between" className="list-item" style={{ animationDelay: `${450 + i * 50}ms` }}>
+            {recentTransactions.map((t) => (
+              <Group key={t.id} justify="space-between">
                 <div>
                   <Text size="sm" fw={500}>{t.description || 'Transaction'}</Text>
                   <Text size="xs" c="dimmed">{new Date(t.date).toLocaleDateString()}</Text>

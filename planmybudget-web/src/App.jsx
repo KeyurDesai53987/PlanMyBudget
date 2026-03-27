@@ -66,22 +66,20 @@ function App() {
             opened={showWhatsNew} 
             onClose={() => setShowWhatsNew(false)} 
           />
-          <main className="main-content" key={location.pathname}>
-            <div className="page-enter-active">
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/accounts" element={<Accounts />} />
-                  <Route path="/transactions" element={<Transactions />} />
-                  <Route path="/budgets" element={<Budgets />} />
-                  <Route path="/goals" element={<Goals />} />
-                  <Route path="/recurring" element={<Recurring />} />
-                  <Route path="/categories" element={<Categories />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </Suspense>
-            </div>
+          <main className="main-content">
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/accounts" element={<Accounts />} />
+                <Route path="/transactions" element={<Transactions />} />
+                <Route path="/budgets" element={<Budgets />} />
+                <Route path="/goals" element={<Goals />} />
+                <Route path="/recurring" element={<Recurring />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
           </main>
         </>
       )}

@@ -274,77 +274,16 @@ body {
 /* Smooth transitions */
 * {
   -webkit-tap-highlight-color: transparent;
-  transition: border-color 200ms ease, background-color 200ms ease;
 }
 
-/* Page transition animations */
-.page-enter {
-  opacity: 0;
-  transform: translateY(10px);
-}
-
-.page-enter-active {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 300ms ease-out, transform 300ms ease-out;
-}
-
-.page-exit {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.page-exit-active {
-  opacity: 0;
-  transform: translateY(-10px);
-  transition: opacity 200ms ease-in, transform 200ms ease-in;
-}
-
-/* Staggered list animation */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(15px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.list-item {
-  animation: fadeInUp 400ms ease-out forwards;
-  opacity: 0;
-}
-
-/* Card hover effects */
-.animated-card {
-  transition: transform 200ms ease, box-shadow 200ms ease;
-}
-
+/* Subtle card hover effects - removed for performance */
+/*
 .animated-card:hover {
-  transform: translateY(-3px);
   box-shadow: var(--hover-shadow);
 }
+*/
 
-/* Button scale effect */
-.mantine-Button-root {
-  transition: transform 100ms ease, box-shadow 150ms ease;
-}
-
-.mantine-Button-root:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.mantine-ActionIcon-root {
-  transition: transform 100ms ease;
-}
-
-.mantine-ActionIcon-root:active:not(:disabled) {
-  transform: scale(0.92);
-}
-
-/* Shimmer animation for skeletons */
+/* Shimmer animation for skeletons - subtle */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -358,52 +297,22 @@ body {
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.15) 50%,
     rgba(255, 255, 255, 0) 100%
   );
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 1.2s infinite;
 }
 
 [data-mantine-color-scheme="dark"] .skeleton-shimmer {
   background: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.05) 50%,
     rgba(255, 255, 255, 0) 100%
   );
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-/* Animated counter */
-@keyframes countUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.counter-animated {
-  animation: countUp 500ms ease-out;
-}
-
-/* Fade in animation */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.fade-in {
-  animation: fadeIn 300ms ease-out;
+  animation: shimmer 1.2s infinite;
 }
 
 /* Better scroll behavior */

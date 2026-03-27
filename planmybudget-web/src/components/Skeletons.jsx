@@ -17,7 +17,7 @@ export function DashboardSkeleton() {
       
       <SimpleGrid cols={{ base: 2, sm: 4 }} mb="xl">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} shadow="sm" padding="md" radius="md" withBorder className="animated-card">
+          <Card key={i} shadow="sm" padding="md" radius="md" withBorder >
             <Stack gap="sm">
               <ShimmerSkeleton height={12} width="60%" />
               <ShimmerSkeleton height={24} width="80%" />
@@ -27,19 +27,19 @@ export function DashboardSkeleton() {
       </SimpleGrid>
       
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="xl">
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card">
+        <Card shadow="sm" padding="lg" radius="md" withBorder >
           <ShimmerSkeleton height={200} />
         </Card>
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card">
+        <Card shadow="sm" padding="lg" radius="md" withBorder >
           <ShimmerSkeleton height={200} />
         </Card>
       </SimpleGrid>
       
       <SimpleGrid cols={{ base: 1, sm: 2 }}>
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card">
+        <Card shadow="sm" padding="lg" radius="md" withBorder >
           <ShimmerSkeleton height={200} />
         </Card>
-        <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card">
+        <Card shadow="sm" padding="lg" radius="md" withBorder >
           <ShimmerSkeleton height={200} />
         </Card>
       </SimpleGrid>
@@ -51,12 +51,12 @@ export function AccountsSkeleton() {
   return (
     <div>
       <ShimmerSkeleton height={32} width={200} mb="lg" />
-      <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card">
+      <Card shadow="sm" padding="lg" radius="md" withBorder >
         <Stack gap="md">
           <ShimmerSkeleton height={40} />
           <SimpleGrid cols={{ base: 1, sm: 3 }}>
             {[1, 2, 3].map((i) => (
-              <Card key={i} padding="md" radius="md" withBorder className="animated-card">
+              <Card key={i} padding="md" radius="md" withBorder >
                 <Stack gap="xs">
                   <ShimmerSkeleton height={16} width="60%" />
                   <ShimmerSkeleton height={24} width="40%" />
@@ -76,7 +76,7 @@ export function TransactionsSkeleton() {
       <ShimmerSkeleton height={32} width={200} mb="lg" />
       <Stack gap="xs">
         {[1, 2, 3, 4, 5].map((i) => (
-          <Card key={i} shadow="sm" padding="md" radius="md" withBorder className="animated-card">
+          <Card key={i} shadow="sm" padding="md" radius="md" withBorder >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <ShimmerSkeleton height={16} width={120} mb={4} />
@@ -97,7 +97,7 @@ export function GoalsSkeleton() {
       <ShimmerSkeleton height={32} width={150} mb="lg" />
       <Stack gap="md">
         {[1, 2, 3].map((i) => (
-          <Card key={i} shadow="sm" padding="lg" radius="md" withBorder className="animated-card">
+          <Card key={i} shadow="sm" padding="lg" radius="md" withBorder >
             <Stack gap="sm">
               <ShimmerSkeleton height={20} width="70%" />
               <ShimmerSkeleton height={8} radius="xl" />
@@ -117,7 +117,7 @@ export function BudgetsSkeleton() {
   return (
     <div>
       <ShimmerSkeleton height={32} width={150} mb="lg" />
-      <Card shadow="sm" padding="lg" radius="md" withBorder className="animated-card">
+      <Card shadow="sm" padding="lg" radius="md" withBorder >
         <Stack gap="md">
           {[1, 2, 3].map((i) => (
             <div key={i}>
@@ -138,7 +138,7 @@ export function SettingsSkeleton() {
       <ShimmerSkeleton height={32} width={150} mb="lg" />
       <SimpleGrid cols={{ base: 1, sm: 2 }}>
         {[1, 2, 3].map((i) => (
-          <Card key={i} shadow="sm" padding="lg" radius="md" withBorder className="animated-card">
+          <Card key={i} shadow="sm" padding="lg" radius="md" withBorder >
             <Stack gap="md">
               <ShimmerSkeleton height={16} width={120} />
               <ShimmerSkeleton height={40} />
@@ -159,7 +159,7 @@ export function CategoriesSkeleton() {
       <ShimmerSkeleton height={32} width={150} mb="lg" />
       <SimpleGrid cols={{ base: 2, sm: 4 }} mb="xl">
         {[1, 2, 3, 4, 5, 6].map((i) => (
-          <Card key={i} shadow="sm" padding="md" radius="md" withBorder className="animated-card">
+          <Card key={i} shadow="sm" padding="md" radius="md" withBorder >
             <Stack gap="xs" align="center">
               <ShimmerSkeleton height={40} width={40} radius="xl" />
               <ShimmerSkeleton height={14} width="80%" />
@@ -177,7 +177,7 @@ export function RecurringSkeleton() {
       <ShimmerSkeleton height={32} width={150} mb="lg" />
       <Stack gap="md">
         {[1, 2, 3].map((i) => (
-          <Card key={i} shadow="sm" padding="md" radius="md" withBorder className="animated-card">
+          <Card key={i} shadow="sm" padding="md" radius="md" withBorder >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <ShimmerSkeleton height={16} width={140} mb={4} />
