@@ -150,7 +150,7 @@ export default function Accounts() {
           const typeInfo = ACCOUNT_TYPES.find(t => t.id === acc.type) || ACCOUNT_TYPES[0]
           const Icon = typeInfo.icon
           return (
-            <Card key={acc.id} shadow="sm" padding="md" radius="md" withBorder >>
+            <Card key={acc.id} shadow="sm" padding="md" radius="md" withBorder >
               <Group justify="space-between">
                 <Group gap="sm">
                   <div style={{

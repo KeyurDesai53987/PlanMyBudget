@@ -268,7 +268,7 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card shadow="sm" padding="lg" radius="md" withBorder >>
+        <Card shadow="sm" padding="lg" radius="md" withBorder >
           <Text fw={600} mb="md">Monthly Trend</Text>
           {monthlyData.some(d => d.income > 0 || d.expenses > 0) ? (
             <ResponsiveContainer width="100%" height={220}>

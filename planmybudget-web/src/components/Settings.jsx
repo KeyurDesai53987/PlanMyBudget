@@ -369,7 +369,7 @@ export default function Settings() {
       )}
 
       <Stack gap="md">
-        <Card shadow="sm" padding="lg" radius="md" withBorder >>
+        <Card shadow="sm" padding="lg" radius="md" withBorder >
           <Group gap="lg">
             <Avatar size={80} radius="xl" color="gray" style={{ background: colors.primary + '20' }}>
               <Text size="xl" fw={700} style={{ color: colors.primary }}>{getInitials(profile.name)}</Text>
@@ -395,7 +395,7 @@ export default function Settings() {
           </SimpleGrid>
         </Card>
 
-        <Card shadow="sm" padding="lg" radius="md" withBorder >>
+        <Card shadow="sm" padding="lg" radius="md" withBorder >
           <Group gap="sm" mb="md">
             <IconUser size={20} />
             <Text fw={600}>Profile</Text>
@@ -421,7 +421,7 @@ export default function Settings() {
         </Card>
 
         {!isDemo && (
-          <Card shadow="sm" padding="lg" radius="md" withBorder >>
+          <Card shadow="sm" padding="lg" radius="md" withBorder >
             <Group gap="sm" mb="md">
               <IconLock size={20} />
               <Text fw={600}>Change Password</Text>
@@ -460,7 +460,7 @@ export default function Settings() {
           </Card>
         )}
 
-        <Card shadow="sm" padding="lg" radius="md" withBorder >>
+        <Card shadow="sm" padding="lg" radius="md" withBorder >
           <Group gap="sm" mb="md">
             <IconPalette size={20} />
             <Text fw={600}>Appearance</Text>
@@ -481,7 +481,7 @@ export default function Settings() {
 
         {!isDemo && (
           <>
-            <Card shadow="sm" padding="lg" radius="md" withBorder >>
+            <Card shadow="sm" padding="lg" radius="md" withBorder >
               <Group gap="sm" mb="md">
                 <IconDatabase size={20} />
                 <Text fw={600}>Backup & Restore</Text>
@@ -516,7 +516,7 @@ export default function Settings() {
               </Stack>
             </Card>
 
-            <Card shadow="sm" padding="lg" radius="md" withBorder >>
+            <Card shadow="sm" padding="lg" radius="md" withBorder >
               <Group gap="sm" mb="md">
                 <IconBell size={20} />
                 <Text fw={600}>Notifications</Text>
@@ -543,13 +543,13 @@ export default function Settings() {
         )}
 
         {isDemo && (
-          <Alert color="blue" variant="light" >>
+          <Alert color="blue" variant="light" >
             <Text size="sm" fw={500}>Demo Account</Text>
             <Text size="xs">This is a demo account. Create your own account to access all features including backup, notifications, and more.</Text>
           </Alert>
         )}
 
-        <Card shadow="sm" padding="lg" radius="md" withBorder >>
+        <Card shadow="sm" padding="lg" radius="md" withBorder >
           <Group gap="sm" mb="md">
             <IconRocket size={20} />
             <Text fw={600}>App Updates</Text>

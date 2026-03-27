@@ -111,7 +111,7 @@ export default function Goals() {
           const progress = targetAmt > 0 ? (currentAmt / targetAmt) * 100 : 0
           const remaining = targetAmt - currentAmt
           return (
-            <Card key={goal.id} shadow="sm" padding="lg" radius="md" withBorder >>
+            <Card key={goal.id} shadow="sm" padding="lg" radius="md" withBorder >
               <Stack gap="sm">
                 <Group justify="space-between">
                   <Group gap="xs">
