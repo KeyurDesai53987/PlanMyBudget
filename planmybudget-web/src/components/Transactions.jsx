@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, SegmentedControl, ActionIcon, Modal, Menu, Badge, Divider, Box, Transition } from '@mantine/core'
+import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, SegmentedControl, ActionIcon, Modal, Menu, Badge, Divider, Box, Transition, FileInput } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
-import { IconPlus, IconTrash, IconArrowUpRight, IconArrowDownRight, IconEdit, IconDownload, IconRepeat, IconPlayerPlay, IconTag, IconSearch, IconX } from '@tabler/icons-react'
+import { IconPlus, IconTrash, IconArrowUpRight, IconArrowDownRight, IconEdit, IconDownload, IconRepeat, IconPlayerPlay, IconTag, IconSearch, IconX, IconScan } from '@tabler/icons-react'
 import { api } from '../api'
 import { useMantineColorScheme } from '@mantine/core'
 import { colors } from '../theme'
 import { formatCurrency } from '../currencies'
 import { TransactionsSkeleton } from './Skeletons'
+import Tesseract from 'tesseract.js'
 
 const DATE_PRESETS = [
   { label: 'All', value: 'all' },
@@ -132,6 +133,51 @@ export default function Transactions() {
   const [formData, setFormData] = useState({
     accountId: '', date: new Date().toISOString().split('T')[0], amount: '', type: 'debit', description: '', categoryId: ''
   })
+  const [scanning, setScanning] = useState(false)
+  const [receiptFile, setReceiptFile] = useState(null)
+
+  const handleReceiptUpload = async (file) => {
+    if (!file) return
+    setScanning(true)
+    setReceiptFile(file)
+    
+    try {
+      const { data: { text } } = await Tesseract.recognize(file, 'eng', {
+        logger: m => console.log(m)
+      })
+      
+      console.log('OCR Text:', text)
+      
+      // Parse amount (look for $ or numbers)
+      const amountMatch = text.match(/\$?\s*(\d+\.?\d*)/g)
+      const amount = amountMatch ? parseFloat(amountMatch[0].replace('$', '')) : 0
+      
+      // Parse date
+      const dateMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/)
+      let date = new Date().toISOString().split('T')[0]
+      if (dateMatch) {
+        const [, m, d, y] = dateMatch
+        date = `${y.length === 2 ? '20' + y : y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+      }
+      
+      // Use first line as description
+      const lines = text.split('\n').filter(l => l.trim())
+      const description = lines[0] || 'Receipt'
+      
+      setFormData(prev => ({
+        ...prev,
+        description,
+        amount: amount.toString(),
+        date
+      }))
+      
+      setShowForm(true)
+    } catch (err) {
+      console.error('OCR Error:', err)
+      alert('Failed to scan receipt')
+    }
+    setScanning(false)
+  }
 
   const [debouncedSearch] = useDebouncedValue(searchQuery, 300)
 
@@ -302,6 +348,15 @@ export default function Transactions() {
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
+          <Button variant="light" color="gray" leftSection={<IconScan size={16} />} size="sm" onClick={() => document.getElementById('receipt-upload').click()}>
+            Scan Receipt
+          </Button>
+          <FileInput
+            id="receipt-upload"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(file) => handleReceiptUpload(file)}
+          />
           <Button variant="light" color="gray" leftSection={<IconPlus size={16} />} onClick={() => setShowForm(!showForm)}>
             {showForm ? 'Done' : 'Add'}
           </Button>

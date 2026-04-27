@@ -52,23 +52,42 @@ export default function Reminders() {
     finally { setLoading(false) }
   }
 
+  const [saving, setSaving] = useState(false)
+
   const handleSubmit = async () => {
-    const payload = {
-      ...formData,
-      amount: formData.amount ? parseFloat(formData.amount) : 0,
-      dueDate: formData.dueDate
+    if (!formData.title || !formData.dueDate || !formData.category) {
+      alert('Please fill in required fields')
+      return
     }
     
-    if (editingReminder) {
-      await api(`/reminders/${editingReminder.id}`, { method: 'PUT', body: JSON.stringify(payload) })
-    } else {
-      await api('/reminders', { body: JSON.stringify(payload) })
+    setSaving(true)
+    try {
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        dueDate: formData.dueDate,
+        amount: formData.amount ? parseFloat(formData.amount) : 0,
+        category: formData.category,
+        recurring: formData.recurring,
+        notify: formData.notify
+      }
+      
+      if (editingReminder) {
+        await api(`/reminders/${editingReminder.id}`, { method: 'PUT', body: JSON.stringify(payload) })
+      } else {
+        await api('/reminders', { body: JSON.stringify(payload) })
+      }
+      
+      setFormData({ title: '', description: '', dueDate: '', amount: '', category: 'credit_card', recurring: 'monthly', notify: true })
+      setShowForm(false)
+      setEditingReminder(null)
+      loadReminders()
+    } catch (err) {
+      console.error('Error saving reminder:', err)
+      const msg = err?.response?.data?.error || err?.message || 'Unknown error'
+      alert('Error saving reminder: ' + msg)
     }
-    
-    setFormData({ title: '', description: '', dueDate: '', amount: '', category: 'credit_card', recurring: 'monthly', notify: true })
-    setShowForm(false)
-    setEditingReminder(null)
-    loadReminders()
+    setSaving(false)
   }
 
   const handleEdit = (reminder) => {
@@ -272,7 +291,7 @@ export default function Reminders() {
           />
           <Group justify="flex-end" gap="sm">
             <Button variant="subtle" onClick={() => { setShowForm(false); setEditingReminder(null) }}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={!formData.title || !formData.dueDate || !formData.category}>
+            <Button onClick={handleSubmit} loading={saving} disabled={!formData.title || !formData.dueDate || !formData.category}>
               {editingReminder ? 'Save' : 'Add'}
             </Button>
           </Group>
