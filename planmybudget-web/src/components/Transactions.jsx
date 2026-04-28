@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, SegmentedControl, ActionIcon, Modal, Menu, Badge, Divider, Box, Transition } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
-import { IconPlus, IconTrash, IconArrowUpRight, IconArrowDownRight, IconEdit, IconDownload, IconRepeat, IconPlayerPlay, IconTag, IconSearch, IconX } from '@tabler/icons-react'
+import { IconPlus, IconTrash, IconArrowUpRight, IconArrowDownRight, IconEdit, IconDownload, IconRepeat, IconPlayerPlay, IconTag, IconSearch, IconX, IconScan } from '@tabler/icons-react'
 import { api } from '../api'
 import { useMantineColorScheme } from '@mantine/core'
 import { colors } from '../theme'
