@@ -7,6 +7,7 @@ import { GoalsSkeleton } from './Skeletons'
 export default function Goals() {
   const [goals, setGoals] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [addFundsModal, setAddFundsModal] = useState({ open: false, goal: null })
@@ -16,10 +17,14 @@ export default function Goals() {
   useEffect(() => { loadGoals() }, [])
 
   const loadGoals = async () => {
+    setError(null)
     try {
       const res = await api('/goals')
       setGoals(res.goals || [])
-    } catch (err) { console.error(err) }
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Failed to load data')
+    }
     finally { setLoading(false) }
   }
 
@@ -66,6 +71,26 @@ export default function Goals() {
   }
 
   if (loading) return <GoalsSkeleton />
+
+  if (error) return (
+    <div>
+      <Group justify="space-between" mb="lg">
+        <Text size="xl" fw={700} style={{ fontSize: '1.5rem' }}>Goals</Text>
+        <Button variant="light" color="gray" leftSection={<IconPlus size={16} />} onClick={() => { setShowForm(!showForm); setFormData({ name: '', targetAmount: '' }) }}>
+          {showForm ? 'Cancel' : 'New'}
+        </Button>
+      </Group>
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Stack align="center" gap="sm" py="xl">
+          <Text c="red" fw={600}>Failed to load data</Text>
+          <Text size="sm" c="dimmed">{error}</Text>
+          <Button variant="light" onClick={() => { setLoading(true); setError(null); loadGoals() }}>
+            Retry
+          </Button>
+        </Stack>
+      </Card>
+    </div>
+  )
 
   return (
     <div>

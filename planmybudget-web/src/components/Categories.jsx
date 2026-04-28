@@ -10,6 +10,7 @@ const DEFAULT_COLORS = [colors.primary, colors.success, colors.danger, colors.pu
 export default function Categories() {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [editModal, setEditModal] = useState({ open: false, category: null })
@@ -18,10 +19,14 @@ export default function Categories() {
   useEffect(() => { loadCategories() }, [])
 
   const loadCategories = async () => {
+    setError(null)
     try {
       const res = await api('/categories')
       setCategories(res.categories || [])
-    } catch (err) { console.error(err) }
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Failed to load data')
+    }
     finally { setLoading(false) }
   }
 
@@ -65,6 +70,31 @@ export default function Categories() {
   }
 
   if (loading) return <CategoriesSkeleton />
+
+  if (error) return (
+    <div>
+      <Group justify="space-between" mb="lg">
+        <Text size="xl" fw={700} style={{ fontSize: '1.5rem' }}>Categories</Text>
+        <Button 
+          variant="light" 
+          color="gray" 
+          leftSection={<IconPlus size={16} />}
+          onClick={() => { setShowForm(!showForm); setFormData({ name: '' }) }}
+        >
+          {showForm ? 'Cancel' : 'Add Category'}
+        </Button>
+      </Group>
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Stack align="center" gap="sm" py="xl">
+          <Text c="red" fw={600}>Failed to load data</Text>
+          <Text size="sm" c="dimmed">{error}</Text>
+          <Button variant="light" onClick={() => { setLoading(true); setError(null); loadCategories() }}>
+            Retry
+          </Button>
+        </Stack>
+      </Card>
+    </div>
+  )
 
   return (
     <div>

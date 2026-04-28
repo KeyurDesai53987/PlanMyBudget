@@ -14,6 +14,7 @@ export default function Budgets() {
   const [transactions, setTransactions] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -23,12 +24,16 @@ export default function Budgets() {
   const [formData, setFormData] = useState({ month: new Date().getMonth() + 1, year: new Date().getFullYear(), lines: [{ categoryId: '', amount: '' }] })
 
   const loadData = useCallback(async () => {
+    setError(null)
     try {
       const [budgetRes, txnRes, catRes] = await Promise.all([api('/budgets'), api('/transactions'), api('/categories')])
       setBudgets(budgetRes.budgets || [])
       setTransactions(txnRes.transactions || [])
       setCategories(catRes.categories || [])
-    } catch (err) { console.error(err) }
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Failed to load data')
+    }
     finally { setLoading(false); setRefreshing(false) }
   }, [])
 
@@ -175,6 +180,31 @@ export default function Budgets() {
   }
 
   if (loading) return <BudgetsSkeleton />
+
+  if (error) return (
+    <div>
+      <Group justify="space-between" mb="lg">
+        <Group gap="xs">
+          <Text size="xl" fw={700} style={{ fontSize: '1.5rem' }}>Budget</Text>
+          <ActionIcon variant="subtle" color="gray" onClick={handleRefresh} loading={refreshing}>
+            <IconRefresh size={18} />
+          </ActionIcon>
+        </Group>
+        <Button variant="light" color="gray" leftSection={<IconPlus size={16} />} onClick={() => setShowForm(!showForm)}>
+          {showForm ? 'Cancel' : 'New'}
+        </Button>
+      </Group>
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Stack align="center" gap="sm" py="xl">
+          <Text c="red" fw={600}>Failed to load data</Text>
+          <Text size="sm" c="dimmed">{error}</Text>
+          <Button variant="light" onClick={() => { setLoading(true); setError(null); loadData() }}>
+            Retry
+          </Button>
+        </Stack>
+      </Card>
+    </div>
+  )
 
   return (
     <div>

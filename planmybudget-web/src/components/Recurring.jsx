@@ -16,6 +16,7 @@ export default function Recurring() {
   const [recurring, setRecurring] = useState([])
   const [accounts, setAccounts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [editModal, setEditModal] = useState({ open: false, item: null })
@@ -26,12 +27,16 @@ export default function Recurring() {
   useEffect(() => { loadData() }, [])
 
   const loadData = async () => {
+    setError(null)
     try {
       const [rec, accs] = await Promise.all([api('/recurring'), api('/accounts')])
       setRecurring(rec.recurring || [])
       setAccounts(accs.accounts || [])
       if (accs.accounts?.length > 0) setFormData(prev => ({ ...prev, accountId: accs.accounts[0].id }))
-    } catch (err) { console.error(err) }
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Failed to load data')
+    }
     finally { setLoading(false) }
   }
 
@@ -115,6 +120,29 @@ export default function Recurring() {
   }
 
   if (loading) return <RecurringSkeleton />
+
+  if (error) return (
+    <div>
+      <Group justify="space-between" mb="lg">
+        <Group gap="xs">
+          <IconRepeat size={28} stroke={1.5} />
+          <Text size="xl" fw={700} style={{ fontSize: '1.5rem' }}>Recurring</Text>
+        </Group>
+        <Button variant="light" color="gray" leftSection={<IconPlus size={16} />} onClick={() => { setShowForm(!showForm); setFormData({ accountId: accounts[0]?.id || '', name: '', amount: '', type: 'debit', frequency: 'monthly', startDate: new Date().toISOString().split('T')[0], description: '' }) }}>
+          {showForm ? 'Cancel' : 'New'}
+        </Button>
+      </Group>
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Stack align="center" gap="sm" py="xl">
+          <Text c="red" fw={600}>Failed to load data</Text>
+          <Text size="sm" c="dimmed">{error}</Text>
+          <Button variant="light" onClick={() => { setLoading(true); setError(null); loadData() }}>
+            Retry
+          </Button>
+        </Stack>
+      </Card>
+    </div>
+  )
 
   return (
     <div>

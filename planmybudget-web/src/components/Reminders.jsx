@@ -30,6 +30,7 @@ export default function Reminders() {
   const isDark = colorScheme === 'dark'
   const [reminders, setReminders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [editingReminder, setEditingReminder] = useState(null)
   const [formData, setFormData] = useState({
@@ -45,10 +46,14 @@ export default function Reminders() {
   useEffect(() => { loadReminders() }, [])
 
   const loadReminders = async () => {
+    setError(null)
     try {
       const res = await api('/reminders')
       setReminders(res.reminders || [])
-    } catch (err) { console.error(err) }
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Failed to load data')
+    }
     finally { setLoading(false) }
   }
 
@@ -151,6 +156,26 @@ export default function Reminders() {
   }
 
   if (loading) return <RemindersSkeleton />
+
+  if (error) return (
+    <div>
+      <Group justify="space-between" mb="lg">
+        <Text size="xl" fw={700} style={{ fontSize: '1.5rem' }}>Reminders</Text>
+        <Button leftSection={<IconPlus size={16} />} onClick={() => { setShowForm(true); setEditingReminder(null); setFormData({ title: '', description: '', dueDate: '', amount: '', category: 'credit_card', recurring: 'monthly', notify: true }) }}>
+          Add Reminder
+        </Button>
+      </Group>
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Stack align="center" gap="sm" py="xl">
+          <Text c="red" fw={600}>Failed to load data</Text>
+          <Text size="sm" c="dimmed">{error}</Text>
+          <Button variant="light" onClick={() => { setLoading(true); setError(null); loadReminders() }}>
+            Retry
+          </Button>
+        </Stack>
+      </Card>
+    </div>
+  )
 
   return (
     <div>

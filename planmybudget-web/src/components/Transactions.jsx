@@ -118,6 +118,7 @@ export default function Transactions() {
   const [categories, setCategories] = useState([])
   const [recurring, setRecurring] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [editModal, setEditModal] = useState({ open: false, txn: null })
@@ -144,6 +145,7 @@ export default function Transactions() {
   }, [showSearch])
 
   const loadData = useCallback(async () => {
+    setError(null)
     try {
       const [txns, accs, rec, cats] = await Promise.all([api('/transactions'), api('/accounts'), api('/recurring'), api('/categories')])
       setTransactions(txns.transactions || [])
@@ -151,7 +153,10 @@ export default function Transactions() {
       setRecurring(rec.recurring || [])
       setCategories(cats.categories || [])
       if (accs.accounts?.length > 0) setFormData(prev => ({ ...prev, accountId: accs.accounts[0].id }))
-    } catch (err) { console.error(err) }
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Failed to load data')
+    }
     finally { setLoading(false) }
   }, [])
 
@@ -280,6 +285,23 @@ export default function Transactions() {
   useEffect(() => { setCurrentPage(1) }, [datePreset, customDateRange, pageSize, typeFilter, searchQuery])
 
   if (loading) return <TransactionsSkeleton />
+
+  if (error) return (
+    <div>
+      <Group justify="space-between" mb="md">
+        <Text size="xl" fw={700}>Activity</Text>
+      </Group>
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Stack align="center" gap="sm" py="xl">
+          <Text c="red" fw={600}>Failed to load data</Text>
+          <Text size="sm" c="dimmed">{error}</Text>
+          <Button variant="light" onClick={() => { setLoading(true); setError(null); loadData() }}>
+            Retry
+          </Button>
+        </Stack>
+      </Card>
+    </div>
+  )
 
   return (
     <div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Card, Group, Text, Stack, SimpleGrid, useMantineColorScheme } from '@mantine/core'
+import { Card, Group, Text, Stack, Button, SimpleGrid, useMantineColorScheme } from '@mantine/core'
 import { IconArrowUpRight, IconArrowDownRight, IconWallet, IconTarget, IconPigMoney, IconTrendingUp } from '@tabler/icons-react'
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { api } from '../api'
@@ -41,10 +41,12 @@ export default function Dashboard() {
   const [goals, setGoals] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => { loadData() }, [])
 
   const loadData = useCallback(async () => {
+    setError(null)
     try {
       const [accs, txns, gls, cats] = await Promise.all([
         api('/accounts'), 
@@ -56,7 +58,10 @@ export default function Dashboard() {
       setTransactions(txns.transactions || [])
       setGoals(gls.goals || [])
       setCategories(cats.categories || [])
-    } catch (err) { console.error(err) }
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Failed to load data')
+    }
     finally { setLoading(false) }
   }, [])
 
@@ -187,6 +192,21 @@ export default function Dashboard() {
   [monthlyData])
 
   if (loading) return <DashboardSkeleton />
+
+  if (error) return (
+    <div>
+      <Text size="xl" fw={700} mb="lg" style={{ fontSize: '1.5rem' }}>Dashboard</Text>
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Stack align="center" gap="sm" py="xl">
+          <Text c="red" fw={600}>Failed to load data</Text>
+          <Text size="sm" c="dimmed">{error}</Text>
+          <Button variant="light" onClick={() => { setLoading(true); setError(null); loadData() }}>
+            Retry
+          </Button>
+        </Stack>
+      </Card>
+    </div>
+  )
 
   return (
     <div>

@@ -17,6 +17,7 @@ export default function Accounts() {
   const isDark = colorScheme === 'dark'
   const [accounts, setAccounts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [editModal, setEditModal] = useState({ open: false, account: null })
@@ -25,10 +26,14 @@ export default function Accounts() {
   useEffect(() => { loadAccounts() }, [])
 
   const loadAccounts = async () => {
+    setError(null)
     try {
       const res = await api('/accounts')
       setAccounts(res.accounts || [])
-    } catch (err) { console.error(err) }
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'Failed to load data')
+    }
     finally { setLoading(false) }
   }
 
@@ -77,6 +82,26 @@ export default function Accounts() {
   const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0)
 
   if (loading) return <AccountsSkeleton />
+
+  if (error) return (
+    <div>
+      <Group justify="space-between" mb="lg">
+        <Text size="xl" fw={700} style={{ fontSize: '1.5rem' }}>Accounts</Text>
+        <Button variant="light" color="gray" leftSection={<IconPlus size={16} />} onClick={() => { setShowForm(!showForm); setFormData({ name: '', type: 'checking' }) }}>
+          {showForm ? 'Cancel' : 'Add Account'}
+        </Button>
+      </Group>
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Stack align="center" gap="sm" py="xl">
+          <Text c="red" fw={600}>Failed to load data</Text>
+          <Text size="sm" c="dimmed">{error}</Text>
+          <Button variant="light" onClick={() => { setLoading(true); setError(null); loadAccounts() }}>
+            Retry
+          </Button>
+        </Stack>
+      </Card>
+    </div>
+  )
 
   return (
     <div>
