@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Card, Group, Text, Stack, Button, SimpleGrid, useMantineColorScheme } from '@mantine/core'
+import { Card, Group, Text, Stack, Button, SimpleGrid, Select, SegmentedControl, useMantineColorScheme } from '@mantine/core'
 import { IconArrowUpRight, IconArrowDownRight, IconWallet, IconTarget, IconPigMoney, IconTrendingUp } from '@tabler/icons-react'
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { api } from '../api'
@@ -42,6 +42,23 @@ export default function Dashboard() {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  })
+  const [catChartView, setCatChartView] = useState('expense')
+
+  const monthOptions = useMemo(() => {
+    const options = []
+    for (let i = 0; i < 12; i++) {
+      const d = new Date()
+      d.setMonth(d.getMonth() - i)
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      options.push({ value, label })
+    }
+    return options
+  }, [])
 
   useEffect(() => { loadData() }, [])
 
@@ -142,8 +159,12 @@ export default function Dashboard() {
     categories.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {}), 
   [categories])
 
-  const categoryData = useMemo(() => {
-    return transactions
+  const filterByMonth = useCallback((txns, monthStr) => {
+    return txns.filter(t => t.date && t.date.startsWith(monthStr))
+  }, [])
+
+  const expenseCategoryData = useMemo(() => {
+    return filterByMonth(transactions, selectedMonth)
       .filter(t => t.amount < 0 && t.categoryId)
       .reduce((acc, t) => {
         const name = categoryMap[t.categoryId] || 'Other'
@@ -157,7 +178,24 @@ export default function Dashboard() {
       }, [])
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 6)
-  }, [transactions, categoryMap])
+  }, [transactions, categoryMap, selectedMonth, filterByMonth])
+
+  const incomeCategoryData = useMemo(() => {
+    return filterByMonth(transactions, selectedMonth)
+      .filter(t => t.amount > 0 && t.categoryId)
+      .reduce((acc, t) => {
+        const name = categoryMap[t.categoryId] || 'Other'
+        const existing = acc.find(d => d.name === name)
+        if (existing) {
+          existing.amount += t.amount
+        } else {
+          acc.push({ name, amount: t.amount })
+        }
+        return acc
+      }, [])
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 6)
+  }, [transactions, categoryMap, selectedMonth, filterByMonth])
 
   const accountData = useMemo(() => 
     accounts
@@ -380,12 +418,32 @@ export default function Dashboard() {
         </Card>
 
         <Card shadow="sm" padding="lg" radius="md" withBorder>
-          <Text fw={600} mb="md">Category Spending</Text>
-          {categoryData.length > 0 ? (
+          <Group justify="space-between" mb="md" wrap="wrap" gap="sm">
+            <Text fw={600}>Categories</Text>
+            <Group gap="xs" wrap="nowrap">
+              <SegmentedControl
+                size="xs"
+                value={catChartView}
+                onChange={setCatChartView}
+                data={[
+                  { label: 'Spending', value: 'expense' },
+                  { label: 'Earning', value: 'income' },
+                ]}
+              />
+              <Select
+                size="xs"
+                data={monthOptions}
+                value={selectedMonth}
+                onChange={setSelectedMonth}
+                w={160}
+              />
+            </Group>
+          </Group>
+          {catChartView === 'expense' && expenseCategoryData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
-                  data={categoryData}
+                  data={expenseCategoryData}
                   cx="50%"
                   cy="50%"
                   innerRadius={45}
@@ -394,7 +452,36 @@ export default function Dashboard() {
                   dataKey="amount"
                   stroke="none"
                 >
-                  {categoryData.map((entry, index) => (
+                  {expenseCategoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value, name) => [`$${value.toLocaleString()}`, name]}
+                  contentStyle={{ background: isDark ? '#252525' : '#fff', border: 'none', borderRadius: '8px' }}
+                  itemStyle={{ color: isDark ? '#e5e5e5' : '#1e293b' }}
+                />
+                <Legend
+                  verticalAlign="bottom"
+                  height={36}
+                  formatter={(value) => <span style={{ color: isDark ? '#e5e5e5' : '#1e293b', fontSize: 12 }}>{value}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : catChartView === 'income' && incomeCategoryData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie
+                  data={incomeCategoryData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  dataKey="amount"
+                  stroke="none"
+                >
+                  {incomeCategoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
@@ -411,7 +498,7 @@ export default function Dashboard() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <Text c="dimmed" ta="center" py="xl">No spending data yet</Text>
+            <Text c="dimmed" ta="center" py="xl">No data for this month</Text>
           )}
         </Card>
       </SimpleGrid>
