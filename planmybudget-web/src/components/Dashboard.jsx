@@ -378,6 +378,42 @@ export default function Dashboard() {
             <Text c="dimmed" ta="center" py="xl">No savings data yet</Text>
           )}
         </Card>
+
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Text fw={600} mb="md">Category Spending</Text>
+          {categoryData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  dataKey="amount"
+                  stroke="none"
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value, name) => [`$${value.toLocaleString()}`, name]}
+                  contentStyle={{ background: isDark ? '#252525' : '#fff', border: 'none', borderRadius: '8px' }}
+                  itemStyle={{ color: isDark ? '#e5e5e5' : '#1e293b' }}
+                />
+                <Legend
+                  verticalAlign="bottom"
+                  height={36}
+                  formatter={(value) => <span style={{ color: isDark ? '#e5e5e5' : '#1e293b', fontSize: 12 }}>{value}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <Text c="dimmed" ta="center" py="xl">No spending data yet</Text>
+          )}
+        </Card>
       </SimpleGrid>
 
       {goalSavings.length > 0 && (
