@@ -213,6 +213,98 @@ export default function Dashboard() {
   const [dragIndex, setDragIndex] = useState(null)
   const [dragOverIndex, setDragOverIndex] = useState(null)
   const dropZoneRef = useRef(null)
+  const widgetRefs = useRef({})
+  const resizingRef = useRef(null)
+
+  const SNAP_BREAKPOINTS = [
+    { value: 'third', width: 'calc(33.33% - 8px)', label: '⅓' },
+    { value: 'half', width: 'calc(50% - 6px)', label: '½' },
+    { value: 'two-thirds', width: 'calc(66.66% - 8px)', label: '⅔' },
+    { value: 'full', width: '100%', label: '▬' },
+  ]
+
+  const getWidgetWidth = (widgetId) => {
+    const size = prefs.widgetSizes?.[widgetId]
+    const bp = SNAP_BREAKPOINTS.find(b => b.value === size)
+    return bp ? bp.width : '100%'
+  }
+
+  const getWidgetLabel = (widgetId) => {
+    const size = prefs.widgetSizes?.[widgetId]
+    const bp = SNAP_BREAKPOINTS.find(b => b.value === size)
+    return bp ? bp.label : '▬'
+  }
+
+  const getNextSize = (widgetId) => {
+    const size = prefs.widgetSizes?.[widgetId] || 'full'
+    const idx = SNAP_BREAKPOINTS.findIndex(b => b.value === size)
+    return SNAP_BREAKPOINTS[(idx + 1) % SNAP_BREAKPOINTS.length].value
+  }
+
+  const cycleSize = (widgetId) => {
+    updatePrefs({ widgetSizes: { ...prefs.widgetSizes, [widgetId]: getNextSize(widgetId) } })
+  }
+
+  const handleResizeStart = (e, widgetId) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const el = widgetRefs.current[widgetId]
+    if (!el || !dropZoneRef.current) return
+    const rect = el.getBoundingClientRect()
+    const containerRect = dropZoneRef.current.getBoundingClientRect()
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX)
+    if (!clientX) return
+    resizingRef.current = {
+      widgetId,
+      startX: clientX,
+      startWidth: rect.width,
+      containerWidth: containerRect.width,
+    }
+  }
+
+  useEffect(() => {
+    const SNAP_VALUES = [33.33, 50, 66.66, 100]
+    const LABELS = ['third', 'half', 'two-thirds', 'full']
+    const snapPct = (pct) => {
+      const clamped = Math.max(25, Math.min(100, pct))
+      return SNAP_VALUES.reduce((prev, curr) =>
+        Math.abs(curr - clamped) < Math.abs(prev - clamped) ? curr : prev
+      )
+    }
+
+    const handleMove = (e) => {
+      const r = resizingRef.current
+      if (!r) return
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX)
+      if (!clientX) return
+      const dx = clientX - r.startX
+      const targetWidth = r.startWidth + dx
+      const pct = (targetWidth / r.containerWidth) * 100
+      const snapped = snapPct(pct)
+      const size = LABELS[SNAP_VALUES.indexOf(snapped)]
+      setPrefs(prev => {
+        const current = prev.widgetSizes?.[r.widgetId] || 'full'
+        if (current === size) return prev
+        return { ...prev, widgetSizes: { ...prev.widgetSizes, [r.widgetId]: size } }
+      })
+    }
+
+    const handleUp = () => {
+      resizingRef.current = null
+    }
+
+    window.addEventListener('mousemove', handleMove)
+    window.addEventListener('mouseup', handleUp)
+    window.addEventListener('touchmove', handleMove, { passive: false })
+    window.addEventListener('touchend', handleUp)
+
+    return () => {
+      window.removeEventListener('mousemove', handleMove)
+      window.removeEventListener('mouseup', handleUp)
+      window.removeEventListener('touchmove', handleMove)
+      window.removeEventListener('touchend', handleUp)
+    }
+  }, [])
 
   const saveTimerRef = useRef(null)
   const serverLoadedRef = useRef(false)
@@ -1116,11 +1208,13 @@ export default function Dashboard() {
       >
         {effectiveWidgetIds.map((widgetId, index) => {
           const isDragOver = dragOverIndex === index && dragIndex !== index
-          const isHalf = prefs.widgetSizes?.[widgetId] === 'half'
+          const widgetWidth = getWidgetWidth(widgetId)
+          const widgetLabel = getWidgetLabel(widgetId)
 
           return (
             <div
               key={widgetId}
+              ref={el => widgetRefs.current[widgetId] = el}
               draggable
               onDragStart={(e) => handleDragStart(e, index)}
               onDragOver={(e) => handleDragOver(e, index)}
@@ -1128,13 +1222,14 @@ export default function Dashboard() {
               onDrop={(e) => handleDrop(e, index)}
               onDragEnd={handleDragEnd}
               style={{
-                width: isHalf ? 'calc(50% - 6px)' : '100%',
+                width: widgetWidth,
                 transition: 'all 0.15s ease',
                 opacity: dragIndex === index ? 0.35 : 1,
                 outline: isDragOver ? `2px dashed ${colors.primary}` : 'none',
                 outlineOffset: 2,
                 borderRadius: 4,
                 cursor: dragIndex === index ? 'grabbing' : 'default',
+                position: 'relative',
               }}
             >
               <Card shadow="sm" padding="md" radius="md" withBorder>
@@ -1160,10 +1255,8 @@ export default function Dashboard() {
                         <IconSettings size={13} />
                       </ActionIcon>
                     )}
-                    <ActionIcon variant="subtle" size="sm" color="gray" onClick={() => updatePrefs({
-                      widgetSizes: { ...prefs.widgetSizes, [widgetId]: isHalf ? 'full' : 'half' },
-                    })}>
-                      <Text size="xs" fw={700} c="dimmed">{isHalf ? '½' : '▬'}</Text>
+                    <ActionIcon variant="subtle" size="sm" color="gray" onClick={() => cycleSize(widgetId)}>
+                      <Text size="xs" fw={700} c="dimmed">{widgetLabel}</Text>
                     </ActionIcon>
                     <ActionIcon variant="subtle" size="sm" color="gray" onClick={() => toggleWidget(widgetId)}>
                       <IconEyeOff size={13} />
@@ -1172,9 +1265,36 @@ export default function Dashboard() {
                 </Group>
                 {renderWidget(widgetId)}
               </Card>
+              <div
+                onMouseDown={(e) => handleResizeStart(e, widgetId)}
+                onTouchStart={(e) => handleResizeStart(e, widgetId)}
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  bottom: 0,
+                  width: 14,
+                  height: 14,
+                  cursor: 'nwse-resize',
+                  zIndex: 5,
+                }}
+                className="widget-resize-handle"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" style={{ position: 'absolute', right: 0, bottom: 0 }}>
+                  <line x1="10" y1="14" x2="14" y2="10" stroke={isDark ? '#888' : '#999'} strokeWidth="1.5" />
+                  <line x1="5" y1="14" x2="14" y2="5" stroke={isDark ? '#666' : '#bbb'} strokeWidth="1.5" />
+                </svg>
+              </div>
             </div>
           )
         })}
+        <style>{`
+          .widget-resize-handle {
+            opacity: 0 !important;
+          }
+          div:hover > .widget-resize-handle {
+            opacity: 1 !important;
+          }
+        `}</style>
       </div>
 
       <Modal
@@ -1185,7 +1305,7 @@ export default function Dashboard() {
       >
         <Stack gap="xs">
           <Text size="sm" fw={600} mb="xs">Show / Hide &amp; Resize Widgets</Text>
-          <Text size="xs" c="dimmed" mb="sm">Drag the ≡ handle on each widget to reorder. Click ½ to toggle half-width, or the eye icon to hide.</Text>
+          <Text size="xs" c="dimmed" mb="sm">Drag the ≡ handle to reorder. Drag the bottom-right corner handle to resize (⅓ ½ ⅔ ▬). Click the eye icon to hide.</Text>
           {Object.values(WIDGET_DEFS).map(w => (
             <Group key={w.id} justify="space-between" py={4} wrap="nowrap">
               <Text size="sm" style={{ flex: 1, minWidth: 0 }} lineClamp={1}>{w.label}</Text>
@@ -1197,11 +1317,13 @@ export default function Dashboard() {
                     widgetSizes: { ...prefs.widgetSizes, [w.id]: val },
                   })}
                   data={[
-                    { label: 'Full', value: 'full' },
+                    { label: '▬', value: 'full' },
+                    { label: '⅔', value: 'two-thirds' },
                     { label: '½', value: 'half' },
+                    { label: '⅓', value: 'third' },
                   ]}
                   disabled={!prefs.visibleWidgets[w.id]}
-                  w={90}
+                  w={120}
                 />
                 <Switch
                   size="sm"
@@ -1230,11 +1352,13 @@ export default function Dashboard() {
                         widgetSizes: { ...prefs.widgetSizes, [chart.id]: val },
                       })}
                       data={[
-                        { label: 'Full', value: 'full' },
+                        { label: '▬', value: 'full' },
+                        { label: '⅔', value: 'two-thirds' },
                         { label: '½', value: 'half' },
+                        { label: '⅓', value: 'third' },
                       ]}
                       disabled={!prefs.visibleWidgets?.[chart.id]}
-                      w={90}
+                      w={120}
                     />
                     <Switch
                       size="sm"
