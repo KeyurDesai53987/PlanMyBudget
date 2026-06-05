@@ -20,6 +20,11 @@ router = APIRouter()
 
 
 def detect_delimiter(content: str) -> str:
+    try:
+        dialect = csv.Sniffer().sniff(content[:1024])
+        return dialect.delimiter
+    except csv.Error:
+        pass
     first_line = content.split('\n')[0].strip()
     comma_count = first_line.count(',')
     semicolon_count = first_line.count(';')
@@ -34,7 +39,18 @@ def detect_delimiter(content: str) -> str:
 def parse_csv(content: str) -> list[dict]:
     delimiter = detect_delimiter(content)
     reader = csv.DictReader(io.StringIO(content), delimiter=delimiter)
-    return [{k.strip(): v.strip() for k, v in row.items() if k} for row in reader]
+    rows = []
+    for row in reader:
+        cleaned = {}
+        for k, v in row.items():
+            if k is None:
+                continue
+            key = k.strip()
+            if key:
+                cleaned[key] = v.strip() if v else ''
+        if cleaned:
+            rows.append(cleaned)
+    return rows
 
 
 def parse_excel(content: bytes) -> list[dict]:
