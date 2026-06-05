@@ -142,6 +142,7 @@ export default function Transactions() {
   const [importAccount, setImportAccount] = useState('')
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
+  const [importRows, setImportRows] = useState([])
   const fileInputRef = useRef(null)
 
   const [debouncedSearch] = useDebouncedValue(searchQuery, 300)
@@ -229,38 +230,66 @@ export default function Transactions() {
     setImportFile(file)
     setImportPreview(null)
     setImportResult(null)
+    setImportRows([])
+    await doPreview(file)
+  }
 
+  const doPreview = async (file, mappingOverrides) => {
     try {
       const fd = new window.FormData()
       fd.append('file', file)
+      const m = mappingOverrides || importMapping
+      if (m.date) fd.append('dateColumn', m.date)
+      if (m.description) fd.append('descriptionColumn', m.description)
+      if (m.amount) fd.append('amountColumn', m.amount)
+      if (m.type) fd.append('typeColumn', m.type)
+      if (m.category) fd.append('categoryColumn', m.category)
+      if (m.debit) fd.append('debitColumn', m.debit)
+      if (m.credit) fd.append('creditColumn', m.credit)
       const data = await api('/transactions/import/preview', { method: 'POST', body: fd })
       setImportPreview(data)
+      setImportRows((data.preview || []).map(r => ({
+        ...r,
+        _key: Math.random().toString(36).slice(2),
+        categoryId: r.category_match || '',
+      })))
       setImportMapping(data.detected_mapping || { date: '', description: '', amount: '', type: '', category: '', debit: '', credit: '' })
       if (data.accounts?.length > 0) setImportAccount(data.accounts[0].id)
     } catch (err) { alert(err.message) }
+  }
+
+  const handleReParse = () => {
+    if (importFile) doPreview(importFile)
   }
 
   const updateMapping = (field, value) => {
     setImportMapping(prev => ({ ...prev, [field]: value }))
   }
 
+  const updateImportRow = (key, field, value) => {
+    setImportRows(prev => prev.map(r => r._key === key ? { ...r, [field]: value } : r))
+  }
+
+  const deleteImportRow = (key) => {
+    setImportRows(prev => prev.filter(r => r._key !== key))
+  }
+
   const handleImportSubmit = async () => {
-    if (!importFile || !importAccount) return
+    if (!importAccount || importRows.length === 0) return
     setImporting(true)
     setImportResult(null)
     try {
-      const fd = new window.FormData()
-      fd.append('file', importFile)
-      fd.append('accountId', importAccount)
-      fd.append('dateColumn', importMapping.date)
-      fd.append('descriptionColumn', importMapping.description)
-      fd.append('amountColumn', importMapping.amount)
-      fd.append('typeColumn', importMapping.type)
-      fd.append('categoryColumn', importMapping.category)
-      fd.append('debitColumn', importMapping.debit)
-      fd.append('creditColumn', importMapping.credit)
-      fd.append('skipHeader', 'true')
-      const result = await api('/transactions/import', { method: 'POST', body: fd })
+      const payload = {
+        accountId: importAccount,
+        rows: importRows.map(r => ({
+          date: r.date,
+          description: r.description,
+          amount: Math.abs(r.amount || 0),
+          type: r.type,
+          categoryId: r.categoryId || null,
+        })),
+      }
+      const result = await api('/transactions/import/rows', { method: 'POST', body: JSON.stringify(payload) })
       setImportResult(result)
       if (result.imported > 0) loadData()
     } catch (err) { alert(err.message) }
@@ -712,7 +741,7 @@ export default function Transactions() {
         )}
       </Modal>
 
-      <Modal opened={importModal} onClose={() => { setImportModal(false); setImportPreview(null); setImportResult(null); setImportFile(null) }} title="Import Transactions" size="xl" centered>
+      <Modal opened={importModal} onClose={() => { setImportModal(false); setImportPreview(null); setImportResult(null); setImportFile(null); setImportRows([]) }} title="Import Transactions" size="xl" centered>
         <Stack gap="sm">
           <input type="file" accept=".csv,.xlsx,.xls" ref={fileInputRef} onChange={handleFileSelect} style={{ display: 'none' }} />
           {!importFile ? (
@@ -760,8 +789,9 @@ export default function Transactions() {
                 <Select label="Credit column" placeholder="Auto-detected" clearable data={importPreview.headers?.map(h => ({ value: h, label: h })) || []} value={importMapping.credit} onChange={(v) => updateMapping('credit', v)} />
                 <Select label="Category column" placeholder="Auto-detected" clearable data={importPreview.headers?.map(h => ({ value: h, label: h })) || []} value={importMapping.category} onChange={(v) => updateMapping('category', v)} />
               </SimpleGrid>
+              <Button size="xs" variant="light" onClick={handleReParse}>Re-parse</Button>
 
-              <Text size="sm" fw={500} mt="md">Preview ({importPreview.preview?.length || 0} of {importPreview.total_rows} rows)</Text>
+              <Text size="sm" fw={500} mt="md">Preview ({importRows.length} of {importPreview.total_rows} rows)</Text>
 
               <Box style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -773,27 +803,41 @@ export default function Transactions() {
                       <th style={{ padding: '6px 8px', textAlign: 'right' }}>Amount</th>
                       <th style={{ padding: '6px 8px', textAlign: 'left' }}>Type</th>
                       <th style={{ padding: '6px 8px', textAlign: 'left' }}>Category</th>
-                      <th style={{ padding: '6px 8px', textAlign: 'left' }}>Errors</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {importPreview.preview?.map((row, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: '4px 8px' }}>{row.row}</td>
-                        <td style={{ padding: '4px 8px' }}>{row.date}</td>
-                        <td style={{ padding: '4px 8px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.description}</td>
-                        <td style={{ padding: '4px 8px', textAlign: 'right' }}>{row.amount?.toFixed(2)}</td>
-                        <td style={{ padding: '4px 8px' }}><Badge size="xs" color={row.type === 'credit' ? 'green' : 'red'}>{row.type}</Badge></td>
-                        <td style={{ padding: '4px 8px' }}>{row.category || '-'}</td>
-                        <td style={{ padding: '4px 8px' }}>{row.errors?.length > 0 ? <Text size="xs" c="red">{row.errors.join(', ')}</Text> : '-'}</td>
+                    {importRows.map((row, idx) => (
+                      <tr key={row._key} style={{ borderBottom: '1px solid #eee' }}>
+                        <td style={{ padding: '4px 6px', verticalAlign: 'top' }}>{idx + 1}</td>
+                        <td style={{ padding: '4px 6px', verticalAlign: 'top' }}>
+                          <TextInput size="xs" value={row.date} onChange={(e) => updateImportRow(row._key, 'date', e.target.value)} style={{ minWidth: 90 }} />
+                        </td>
+                        <td style={{ padding: '4px 6px', verticalAlign: 'top' }}>
+                          <TextInput size="xs" value={row.description} onChange={(e) => updateImportRow(row._key, 'description', e.target.value)} style={{ minWidth: 120 }} />
+                        </td>
+                        <td style={{ padding: '4px 6px', verticalAlign: 'top', textAlign: 'right' }}>
+                          <NumberInput size="xs" value={Math.abs(row.amount || 0)} onChange={(val) => updateImportRow(row._key, 'amount', Math.abs(parseFloat(val) || 0))} style={{ minWidth: 80 }} />
+                        </td>
+                        <td style={{ padding: '4px 6px', verticalAlign: 'top' }}>
+                          <Select size="xs" data={[{ value: 'debit', label: 'debit' }, { value: 'credit', label: 'credit' }]} value={row.type} onChange={(val) => updateImportRow(row._key, 'type', val)} style={{ minWidth: 75 }} />
+                        </td>
+                        <td style={{ padding: '4px 6px', verticalAlign: 'top' }}>
+                          <Select size="xs" data={importPreview.categories?.map(c => ({ value: c.id, label: c.name })) || []} value={row.categoryId || null} onChange={(val) => updateImportRow(row._key, 'categoryId', val || '')} clearable placeholder="None" searchable style={{ minWidth: 110 }} />
+                        </td>
+                        <td style={{ padding: '4px 6px', verticalAlign: 'top', textAlign: 'center' }}>
+                          <ActionIcon size="sm" color="red" variant="subtle" onClick={() => deleteImportRow(row._key)}>
+                            <IconTrash size={12} />
+                          </ActionIcon>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </Box>
 
-              <Button fullWidth color="gray" onClick={handleImportSubmit} loading={importing} disabled={!importAccount}>
-                Import {importPreview.total_rows} Transactions
+              <Button fullWidth color="gray" onClick={handleImportSubmit} loading={importing} disabled={!importAccount || importRows.length === 0}>
+                Import {importRows.length} Transactions
               </Button>
             </>
           )}
