@@ -6,7 +6,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import axios from 'axios'
 
-const API_BASE = 'https://saveit-r1gc.onrender.com/api'
+const API_BASE = 'https://planmybudget-python.onrender.com/api'
 
 // API Functions
 const getStoredToken = async () => AsyncStorage.getItem('saveit_token')

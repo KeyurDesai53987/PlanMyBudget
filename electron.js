@@ -33,7 +33,7 @@ function startWebServer() {
     const headers = {
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(body),
-      host: 'saveit-r1gc.onrender.com'
+      host: 'planmybudget-python.onrender.com'
     }
     
     // Forward authorization header if present
@@ -42,7 +42,7 @@ function startWebServer() {
     }
     
     const options = {
-      hostname: 'saveit-r1gc.onrender.com',
+      hostname: 'planmybudget-python.onrender.com',
       path: '/api' + req.path,
       method: req.method,
       headers: headers
