@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, SegmentedControl, ActionIcon, Modal, Menu, Badge, Divider, Box, Transition } from '@mantine/core'
+import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, SegmentedControl, ActionIcon, Modal, Menu, Badge, Divider, Box, Transition, Alert, SimpleGrid } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
-import { IconPlus, IconTrash, IconArrowUpRight, IconArrowDownRight, IconEdit, IconDownload, IconRepeat, IconPlayerPlay, IconTag, IconSearch, IconX, IconScan } from '@tabler/icons-react'
+import { IconPlus, IconTrash, IconArrowUpRight, IconArrowDownRight, IconEdit, IconDownload, IconRepeat, IconPlayerPlay, IconTag, IconSearch, IconX, IconScan, IconUpload } from '@tabler/icons-react'
 import { api } from '../api'
 import { useMantineColorScheme } from '@mantine/core'
 import { colors } from '../theme'
@@ -133,6 +133,16 @@ export default function Transactions() {
   const [formData, setFormData] = useState({
     accountId: '', date: new Date().toISOString().split('T')[0], amount: '', type: 'debit', description: '', categoryId: ''
   })
+  const [importModal, setImportModal] = useState(false)
+  const [importFile, setImportFile] = useState(null)
+  const [importPreview, setImportPreview] = useState(null)
+  const [importMapping, setImportMapping] = useState({
+    date: '', description: '', amount: '', type: '', category: '', debit: '', credit: ''
+  })
+  const [importAccount, setImportAccount] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState(null)
+  const fileInputRef = useRef(null)
 
   const [debouncedSearch] = useDebouncedValue(searchQuery, 300)
 
@@ -211,6 +221,50 @@ export default function Transactions() {
       await api(`/transactions/${id}`, { method: 'DELETE' })
       loadData()
     } catch (err) { alert(err.message) }
+  }
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportFile(file)
+    setImportPreview(null)
+    setImportResult(null)
+
+    try {
+      const fd = new window.FormData()
+      fd.append('file', file)
+      const data = await api('/transactions/import/preview', { method: 'POST', body: fd })
+      setImportPreview(data)
+      setImportMapping(data.detected_mapping || { date: '', description: '', amount: '', type: '', category: '', debit: '', credit: '' })
+      if (data.accounts?.length > 0) setImportAccount(data.accounts[0].id)
+    } catch (err) { alert(err.message) }
+  }
+
+  const updateMapping = (field, value) => {
+    setImportMapping(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleImportSubmit = async () => {
+    if (!importFile || !importAccount) return
+    setImporting(true)
+    setImportResult(null)
+    try {
+      const fd = new window.FormData()
+      fd.append('file', importFile)
+      fd.append('accountId', importAccount)
+      fd.append('dateColumn', importMapping.date)
+      fd.append('descriptionColumn', importMapping.description)
+      fd.append('amountColumn', importMapping.amount)
+      fd.append('typeColumn', importMapping.type)
+      fd.append('categoryColumn', importMapping.category)
+      fd.append('debitColumn', importMapping.debit)
+      fd.append('creditColumn', importMapping.credit)
+      fd.append('skipHeader', 'true')
+      const result = await api('/transactions/import', { method: 'POST', body: fd })
+      setImportResult(result)
+      if (result.imported > 0) loadData()
+    } catch (err) { alert(err.message) }
+    finally { setImporting(false) }
   }
 
   const getFilteredTransactions = () => {
@@ -324,8 +378,8 @@ export default function Transactions() {
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
-          <Button variant="light" color="gray" leftSection={<IconScan size={16} />} size="sm" disabled>
-            Coming Soon
+          <Button variant="light" color="gray" leftSection={<IconUpload size={16} />} size="sm" onClick={() => setImportModal(true)}>
+            Import
           </Button>
           <Button variant="light" color="gray" leftSection={<IconPlus size={16} />} onClick={() => setShowForm(!showForm)}>
             {showForm ? 'Done' : 'Add'}
@@ -656,6 +710,94 @@ export default function Transactions() {
             </Button>
           </Stack>
         )}
+      </Modal>
+
+      <Modal opened={importModal} onClose={() => { setImportModal(false); setImportPreview(null); setImportResult(null); setImportFile(null) }} title="Import Transactions" size="xl" centered>
+        <Stack gap="sm">
+          <input type="file" accept=".csv,.xlsx,.xls" ref={fileInputRef} onChange={handleFileSelect} style={{ display: 'none' }} />
+          {!importFile ? (
+            <Card withBorder padding="xl" style={{ borderStyle: 'dashed', cursor: 'pointer' }} onClick={() => fileInputRef.current?.click()}>
+              <Stack align="center" gap="sm">
+                <IconUpload size={40} style={{ opacity: 0.4 }} />
+                <Text size="sm" c="dimmed">Click to upload CSV or Excel file</Text>
+              </Stack>
+            </Card>
+          ) : (
+            <Group gap="sm">
+              <Text size="sm" fw={500}>{importFile.name}</Text>
+              <Button size="xs" variant="light" color="gray" onClick={() => fileInputRef.current?.click()}>Change</Button>
+            </Group>
+          )}
+
+          {importResult && (
+            <Alert color={importResult.imported > 0 ? 'green' : 'yellow'}>
+              <Text size="sm" fw={500}>Imported {importResult.imported} of {importResult.total} transactions</Text>
+              {importResult.errors?.length > 0 && (
+                <Text size="xs" mt="xs">{importResult.errors.length} rows had errors (skipped)</Text>
+              )}
+            </Alert>
+          )}
+
+          {importPreview && !importResult && (
+            <>
+              <Select
+                label="Import into account"
+                data={importPreview.accounts?.map(a => ({ value: a.id, label: `${a.name} (${a.currency})` })) || []}
+                value={importAccount}
+                onChange={setImportAccount}
+                required
+              />
+
+              <Text size="sm" fw={500} mt="sm">Column Mapping</Text>
+              <Text size="xs" c="dimmed" mb="xs">Map your file columns to transaction fields</Text>
+
+              <SimpleGrid cols={2} spacing="xs">
+                <Select label="Date column" placeholder="Auto-detected" clearable data={importPreview.headers?.map(h => ({ value: h, label: h })) || []} value={importMapping.date} onChange={(v) => updateMapping('date', v)} />
+                <Select label="Description column" placeholder="Auto-detected" clearable data={importPreview.headers?.map(h => ({ value: h, label: h })) || []} value={importMapping.description} onChange={(v) => updateMapping('description', v)} />
+                <Select label="Amount column" placeholder="Auto-detected" clearable data={importPreview.headers?.map(h => ({ value: h, label: h })) || []} value={importMapping.amount} onChange={(v) => updateMapping('amount', v)} />
+                <Select label="Type column" placeholder="Auto-detected" clearable data={importPreview.headers?.map(h => ({ value: h, label: h })) || []} value={importMapping.type} onChange={(v) => updateMapping('type', v)} />
+                <Select label="Debit column" placeholder="Auto-detected" clearable data={importPreview.headers?.map(h => ({ value: h, label: h })) || []} value={importMapping.debit} onChange={(v) => updateMapping('debit', v)} />
+                <Select label="Credit column" placeholder="Auto-detected" clearable data={importPreview.headers?.map(h => ({ value: h, label: h })) || []} value={importMapping.credit} onChange={(v) => updateMapping('credit', v)} />
+                <Select label="Category column" placeholder="Auto-detected" clearable data={importPreview.headers?.map(h => ({ value: h, label: h })) || []} value={importMapping.category} onChange={(v) => updateMapping('category', v)} />
+              </SimpleGrid>
+
+              <Text size="sm" fw={500} mt="md">Preview ({importPreview.preview?.length || 0} of {importPreview.total_rows} rows)</Text>
+
+              <Box style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #ddd' }}>
+                      <th style={{ padding: '6px 8px', textAlign: 'left' }}>#</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'left' }}>Date</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'left' }}>Description</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right' }}>Amount</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'left' }}>Type</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'left' }}>Category</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'left' }}>Errors</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importPreview.preview?.map((row, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                        <td style={{ padding: '4px 8px' }}>{row.row}</td>
+                        <td style={{ padding: '4px 8px' }}>{row.date}</td>
+                        <td style={{ padding: '4px 8px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.description}</td>
+                        <td style={{ padding: '4px 8px', textAlign: 'right' }}>{row.amount?.toFixed(2)}</td>
+                        <td style={{ padding: '4px 8px' }}><Badge size="xs" color={row.type === 'credit' ? 'green' : 'red'}>{row.type}</Badge></td>
+                        <td style={{ padding: '4px 8px' }}>{row.category || '-'}</td>
+                        <td style={{ padding: '4px 8px' }}>{row.errors?.length > 0 ? <Text size="xs" c="red">{row.errors.join(', ')}</Text> : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Box>
+
+              <Button fullWidth color="gray" onClick={handleImportSubmit} loading={importing} disabled={!importAccount}>
+                Import {importPreview.total_rows} Transactions
+              </Button>
+            </>
+          )}
+        </Stack>
       </Modal>
     </div>
   )
