@@ -127,6 +127,7 @@ function getDateRange(preset, customStart, customEnd) {
 }
 
 function computeChartData(transactions, config, categoryMap, accountMap) {
+  if (!config) return []
   const { metric, groupBy, limit = 8, sortOrder = 'value-desc', filterCategories = [], filterAccounts = [] } = config
   const getVal = (t) => {
     if (metric === 'income') return t.amount > 0 ? t.amount : 0
@@ -242,7 +243,16 @@ export default function Dashboard() {
       if (res.prefs) {
         const serverPrefs = JSON.parse(res.prefs)
         setPrefs(prev => {
-          const merged = { ...prev, ...serverPrefs, customCharts: serverPrefs.customCharts || prev.customCharts || [] }
+          const merged = {
+            ...prev,
+            ...(serverPrefs.widgetOrder ? { widgetOrder: serverPrefs.widgetOrder } : {}),
+            ...(serverPrefs.visibleWidgets ? { visibleWidgets: { ...prev.visibleWidgets, ...serverPrefs.visibleWidgets } } : {}),
+            ...(serverPrefs.widgetSizes ? { widgetSizes: { ...prev.widgetSizes, ...serverPrefs.widgetSizes } } : {}),
+            ...(serverPrefs.widgetSettings ? { widgetSettings: { ...prev.widgetSettings, ...serverPrefs.widgetSettings } } : {}),
+            ...(serverPrefs.customCharts ? { customCharts: serverPrefs.customCharts } : {}),
+            ...(serverPrefs.datePreset ? { datePreset: serverPrefs.datePreset } : {}),
+            ...(serverPrefs.selectedAccounts ? { selectedAccounts: serverPrefs.selectedAccounts } : {}),
+          }
           try { localStorage.setItem('dashboardPrefs', JSON.stringify(merged)) } catch {}
           return merged
         })
@@ -494,13 +504,17 @@ export default function Dashboard() {
     setDragIndex(null)
     setDragOverIndex(null)
     if (srcIndex === dropIndex) return
-    const ids = [...visibleWidgetIds]
-    const [removed] = ids.splice(srcIndex, 1)
-    ids.splice(dropIndex, 0, removed)
-    updatePrefs({
-      widgetOrder: ids,
-      visibleWidgets: prefs.visibleWidgets,
-    })
+    const fullOrder = [...prefs.widgetOrder]
+    const visibleIds = fullOrder.filter(id => prefs.visibleWidgets[id] && (id in WIDGET_DEFS || (prefs.customCharts || []).some(c => c.id === id)))
+    const srcWidgetId = visibleIds[srcIndex]
+    const destWidgetId = visibleIds[dropIndex]
+    if (!srcWidgetId || !destWidgetId) return
+    const srcFullIndex = fullOrder.indexOf(srcWidgetId)
+    const destFullIndex = fullOrder.indexOf(destWidgetId)
+    const reordered = [...fullOrder]
+    const [removed] = reordered.splice(srcFullIndex, 1)
+    reordered.splice(destFullIndex, 0, removed)
+    updatePrefs({ widgetOrder: reordered })
   }
 
   const handleDragEnd = () => {
@@ -635,7 +649,7 @@ export default function Dashboard() {
                         ))}
                       </Pie>
                     ) : (
-                      <Pie data={incomeVsExpenseData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={5} dataKey="value" stroke="none">
+                      <Pie data={incomeVsExpenseData} cx="50%" cy="50%" innerRadius={iveChartType === 'pie' ? 0 : 45} outerRadius={80} paddingAngle={iveChartType === 'pie' ? 0 : 5} dataKey="value" stroke="none">
                         {incomeVsExpenseData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={index === 0 ? iveIncomeColor : iveExpenseColor} />
                         ))}
@@ -724,11 +738,11 @@ export default function Dashboard() {
                     </Bar>
                   </BarChart>
                 ) : (
-                  <PieChart>
+                    <PieChart>
                     <Pie data={balData} cx="50%" cy="50%"
-                      innerRadius={balChartType === 'donut' ? 50 : 40}
+                      innerRadius={balChartType === 'donut' ? 50 : balChartType === 'pie' ? 0 : 40}
                       outerRadius={80}
-                      paddingAngle={2} dataKey="value" stroke="none"
+                      paddingAngle={balChartType === 'pie' ? 0 : 2} dataKey="value" stroke="none"
                     >
                       {balData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
@@ -853,7 +867,7 @@ export default function Dashboard() {
           }
           return (
             <PieChart>
-              <Pie data={data} cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={2} dataKey="amount" stroke="none">
+              <Pie data={data} cx="50%" cy="50%" innerRadius={catChartType === 'donut' ? 55 : catChartType === 'pie' ? 0 : 45} outerRadius={80} paddingAngle={catChartType === 'pie' ? 0 : 2} dataKey="amount" stroke="none">
                 {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                 ))}
@@ -968,13 +982,15 @@ export default function Dashboard() {
             <Text fw={600} mb="sm">{customChart.title}</Text>
             {data.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
-                {customChart.type === 'pie' ? (
+                {customChart.type === 'pie' || customChart.type === 'donut' ? (
                   <PieChart>
                     <Pie
                       data={data}
                       cx="50%" cy="50%"
-                      innerRadius={45} outerRadius={80}
-                      paddingAngle={2} dataKey="value" stroke="none"
+                      innerRadius={customChart.type === 'donut' ? 55 : 0}
+                      outerRadius={80}
+                      paddingAngle={customChart.type === 'pie' ? 0 : 2}
+                      dataKey="value" stroke="none"
                     >
                       {data.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
@@ -1260,6 +1276,7 @@ export default function Dashboard() {
                 { value: 'bar', label: 'Bar Chart' },
                 { value: 'line', label: 'Line Chart' },
                 { value: 'pie', label: 'Pie Chart' },
+                { value: 'donut', label: 'Donut' },
               ]}
               value={chartForm.type}
               onChange={(val) => setChartForm({ ...chartForm, type: val })}
@@ -1426,7 +1443,7 @@ export default function Dashboard() {
           if (wid === 'categories') {
             return (
               <Stack gap="md">
-                <Select label="Chart Type" data={[{ value: 'pie', label: 'Pie Chart' }, { value: 'bar', label: 'Bar Chart' }]} value={s('chartType')} onChange={(v) => u('chartType', v)} />
+                <Select label="Chart Type" data={[{ value: 'pie', label: 'Pie Chart' }, { value: 'donut', label: 'Donut' }, { value: 'bar', label: 'Bar Chart' }]} value={s('chartType')} onChange={(v) => u('chartType', v)} />
                 <Switch label="Show Legend" checked={!!s('showLegend')} onChange={(e) => u('showLegend', e.currentTarget.checked)} />
               </Stack>
             )
