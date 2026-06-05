@@ -75,8 +75,8 @@ export default function Navbar({ onLogout }) {
       try {
         const res = await api('/profile')
         setUser({
-          name: res.preferences?.name || 'User',
-          email: res.preferences?.email || ''
+          name: res.name || 'User',
+          email: res.email || ''
         })
       } catch (err) {
         console.error(err)
