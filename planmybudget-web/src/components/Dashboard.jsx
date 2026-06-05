@@ -1230,9 +1230,10 @@ export default function Dashboard() {
                 borderRadius: 4,
                 cursor: dragIndex === index ? 'grabbing' : 'default',
                 position: 'relative',
+                display: 'flex',
               }}
             >
-              <Card shadow="sm" padding="md" radius="md" withBorder>
+              <Card shadow="sm" padding="md" radius="md" withBorder style={{ flex: 1, minWidth: 0 }}>
                 <Group justify="space-between" mb="sm" gap={4}>
                   <Group gap={6}>
                     <IconGripVertical
