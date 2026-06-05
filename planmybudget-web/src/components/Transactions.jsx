@@ -143,6 +143,7 @@ export default function Transactions() {
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
   const [importRows, setImportRows] = useState([])
+  const [importPage, setImportPage] = useState(1)
   const fileInputRef = useRef(null)
 
   const [debouncedSearch] = useDebouncedValue(searchQuery, 300)
@@ -253,6 +254,7 @@ export default function Transactions() {
         _key: Math.random().toString(36).slice(2),
         categoryId: r.category_match || '',
       })))
+      setImportPage(1)
       setImportMapping(data.detected_mapping || { date: '', description: '', amount: '', type: '', category: '', debit: '', credit: '' })
       if (data.accounts?.length > 0) setImportAccount(data.accounts[0].id)
     } catch (err) { alert(err.message) }
@@ -807,9 +809,9 @@ export default function Transactions() {
                     </tr>
                   </thead>
                   <tbody>
-                    {importRows.map((row, idx) => (
+                    {importRows.slice((importPage - 1) * 25, importPage * 25).map((row, idx) => (
                       <tr key={row._key} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: '4px 6px', verticalAlign: 'top' }}>{idx + 1}</td>
+                        <td style={{ padding: '4px 6px', verticalAlign: 'top' }}>{(importPage - 1) * 25 + idx + 1}</td>
                         <td style={{ padding: '4px 6px', verticalAlign: 'top' }}>
                           <TextInput size="xs" value={row.date} onChange={(e) => updateImportRow(row._key, 'date', e.target.value)} style={{ minWidth: 90 }} />
                         </td>
@@ -826,7 +828,7 @@ export default function Transactions() {
                           <Select size="xs" data={importPreview.categories?.map(c => ({ value: c.id, label: c.name })) || []} value={row.categoryId || null} onChange={(val) => updateImportRow(row._key, 'categoryId', val || '')} clearable placeholder="None" searchable style={{ minWidth: 110 }} />
                         </td>
                         <td style={{ padding: '4px 6px', verticalAlign: 'top', textAlign: 'center' }}>
-                          <ActionIcon size="sm" color="red" variant="subtle" onClick={() => deleteImportRow(row._key)}>
+                          <ActionIcon size="sm" color="red" variant="subtle" onClick={() => { deleteImportRow(row._key); setImportPage(1) }}>
                             <IconTrash size={12} />
                           </ActionIcon>
                         </td>
@@ -835,6 +837,14 @@ export default function Transactions() {
                   </tbody>
                 </table>
               </Box>
+
+              {importRows.length > 25 && (
+                <Group justify="center" gap="xs" mt="xs">
+                  <Button size="xs" variant="light" disabled={importPage === 1} onClick={() => setImportPage(p => Math.max(1, p - 1))}>Prev</Button>
+                  <Text size="xs" c="dimmed">Page {importPage} of {Math.ceil(importRows.length / 25)}</Text>
+                  <Button size="xs" variant="light" disabled={importPage >= Math.ceil(importRows.length / 25)} onClick={() => setImportPage(p => p + 1)}>Next</Button>
+                </Group>
+              )}
 
               <Button fullWidth color="gray" onClick={handleImportSubmit} loading={importing} disabled={!importAccount || importRows.length === 0}>
                 Import {importRows.length} Transactions
