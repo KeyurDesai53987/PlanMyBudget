@@ -1,5 +1,6 @@
 {
-  "buildCommand": "cd planmybudget-web && npm install && npm run build",
+  "installCommand": "cd planmybudget-web && npm install",
+  "buildCommand": "cd planmybudget-web && npm run build",
   "outputDirectory": "planmybudget-web/dist",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "https://planmybudget-python.onrender.com/api/$1" }
