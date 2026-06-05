@@ -161,8 +161,8 @@ function computeChartData(transactions, config, categoryMap, accountMap) {
   return data.slice(0, limit || 10)
 }
 
-const StatCard = ({ label, value, icon: Icon, color, prefix = '$' }) => (
-  <Card shadow="sm" padding="md" radius="md" withBorder>
+const StatCard = ({ label, value, icon: Icon, color, prefix = '$', onClick }) => (
+  <Card shadow="sm" padding="md" radius="md" withBorder style={{ cursor: onClick ? 'pointer' : 'default' }} onClick={onClick}>
     <Group justify="space-between" align="flex-start">
       <div style={{ minWidth: 0, flex: 1 }}>
         <Text size="xs" tt="uppercase" fw={600} c="dimmed">{label}</Text>
@@ -209,6 +209,7 @@ export default function Dashboard() {
     sortOrder: 'value-desc', showLegend: true, color: colors.primary,
     filterCategories: [], filterAccounts: [],
   })
+  const [drilldown, setDrilldown] = useState({ open: false, title: '', transactions: [] })
 
   const [dragIndex, setDragIndex] = useState(null)
   const [dragOverIndex, setDragOverIndex] = useState(null)
@@ -531,7 +532,7 @@ export default function Dashboard() {
   )
 
   const recentTransactions = useMemo(() =>
-    [...filteredTransactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5),
+    [...filteredTransactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 20),
     [filteredTransactions]
   )
 
@@ -549,6 +550,7 @@ export default function Dashboard() {
     }
     return result
   }, [filteredTransactions, prefs.customCharts, categoryMap, accountMap])
+
 
   const effectiveWidgetIds = useMemo(() =>
     visibleWidgetIds.filter(id => id !== 'goalsProgress' || hasGoals),
@@ -573,6 +575,34 @@ export default function Dashboard() {
       visibleWidgets: { ...prefs.visibleWidgets, [id]: !prefs.visibleWidgets[id] },
     })
   }, [prefs.visibleWidgets, updatePrefs])
+
+  const openDrilldown = (title, txns) => {
+    setDrilldown({
+      open: true,
+      title,
+      transactions: [...txns].sort((a, b) => new Date(b.date) - new Date(a.date)),
+    })
+  }
+
+  const getFilteredByGroup = useCallback(({ groupBy, metric, filterCategories = [], filterAccounts = [] }, groupName) => {
+    let txns = filteredTransactions
+    if (filterCategories.length > 0) txns = txns.filter(t => filterCategories.includes(t.categoryId))
+    if (filterAccounts.length > 0) txns = txns.filter(t => filterAccounts.includes(t.accountId))
+    if (groupBy === 'category') {
+      const catId = Object.entries(categoryMap).find(([, v]) => v === groupName)?.[0]
+      if (catId) txns = txns.filter(t => t.categoryId === catId)
+    } else if (groupBy === 'account') {
+      const accId = Object.entries(accountMap).find(([, v]) => v === groupName)?.[0]
+      if (accId) txns = txns.filter(t => t.accountId === accId)
+    } else if (groupBy === 'month') {
+      txns = txns.filter(t => t.date?.startsWith(groupName))
+    } else if (groupBy === 'day') {
+      txns = txns.filter(t => t.date === groupName)
+    }
+    if (metric === 'income') txns = txns.filter(t => t.amount > 0)
+    else if (metric === 'expenses') txns = txns.filter(t => t.amount < 0)
+    return txns
+  }, [filteredTransactions, categoryMap, accountMap])
 
   const handleDragStart = (e, index) => {
     e.dataTransfer.setData('text/plain', String(index))
@@ -619,6 +649,8 @@ export default function Dashboard() {
       title: '', type: 'bar', metric: 'expenses', groupBy: 'category', limit: 8,
       sortOrder: 'value-desc', showLegend: true, color: colors.primary,
       filterCategories: [], filterAccounts: [],
+      datePreset: 'all', selectedMonth: '',
+      customStartDate: '', customEndDate: '',
     })
     setEditingChartId(null)
   }
@@ -629,6 +661,8 @@ export default function Dashboard() {
       sortOrder: chart.sortOrder || 'value-desc', showLegend: chart.showLegend ?? true,
       color: chart.color || colors.primary, filterCategories: chart.filterCategories || [],
       filterAccounts: chart.filterAccounts || [],
+      datePreset: chart.datePreset || 'all', selectedMonth: chart.selectedMonth || '',
+      customStartDate: chart.customStartDate || '', customEndDate: chart.customEndDate || '',
     })
     setEditingChartId(chart.id)
     setChartModalOpen(true)
@@ -690,15 +724,15 @@ export default function Dashboard() {
           <>
             <Text fw={600} mb="md">{periodLabel}</Text>
             <SimpleGrid cols={{ base: 3, sm: 3 }}>
-              <Card shadow="sm" padding="md" radius="md" withBorder>
+              <Card shadow="sm" padding="md" radius="md" withBorder style={{ cursor: 'pointer' }} onClick={() => openDrilldown('Income', filteredTransactions.filter(t => t.amount > 0))}>
                 <Text size="xs" tt="uppercase" fw={600} c="dimmed">Income</Text>
                 <Text size="lg" fw={700} c="#10b981">${income.toLocaleString()}</Text>
               </Card>
-              <Card shadow="sm" padding="md" radius="md" withBorder>
+              <Card shadow="sm" padding="md" radius="md" withBorder style={{ cursor: 'pointer' }} onClick={() => openDrilldown('Spent', filteredTransactions.filter(t => t.amount < 0))}>
                 <Text size="xs" tt="uppercase" fw={600} c="dimmed">Spent</Text>
                 <Text size="lg" fw={700} c="#ef4444">-${expenses.toLocaleString()}</Text>
               </Card>
-              <Card shadow="sm" padding="md" radius="md" withBorder>
+              <Card shadow="sm" padding="md" radius="md" withBorder style={{ cursor: 'pointer' }} onClick={() => openDrilldown('All Transactions', filteredTransactions)}>
                 <Text size="xs" tt="uppercase" fw={600} c="dimmed">Saved</Text>
                 <Text size="lg" fw={700} c="#10b981">
                   ${Math.max(0, totalSavings).toLocaleString()}
@@ -728,7 +762,10 @@ export default function Dashboard() {
                     />
                     <Bar dataKey="value" name="Amount" radius={[4, 4, 0, 0]}>
                       {incomeVsExpenseData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={index === 0 ? iveIncomeColor : iveExpenseColor} />
+                        <Cell key={`cell-${index}`} fill={index === 0 ? iveIncomeColor : iveExpenseColor} onClick={() => {
+                          const txns = filteredTransactions.filter(t => entry.name === 'Income' ? t.amount > 0 : t.amount < 0)
+                          openDrilldown(entry.name, txns)
+                        }} style={{ cursor: 'pointer' }} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -737,13 +774,19 @@ export default function Dashboard() {
                     {(iveChartType === 'donut') ? (
                       <Pie data={incomeVsExpenseData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
                         {incomeVsExpenseData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={index === 0 ? iveIncomeColor : iveExpenseColor} />
+                          <Cell key={`cell-${index}`} fill={index === 0 ? iveIncomeColor : iveExpenseColor} onClick={() => {
+                            const txns = filteredTransactions.filter(t => entry.name === 'Income' ? t.amount > 0 : t.amount < 0)
+                            openDrilldown(entry.name, txns)
+                          }} style={{ cursor: 'pointer' }} />
                         ))}
                       </Pie>
                     ) : (
                       <Pie data={incomeVsExpenseData} cx="50%" cy="50%" innerRadius={iveChartType === 'pie' ? 0 : 45} outerRadius={80} paddingAngle={iveChartType === 'pie' ? 0 : 5} dataKey="value" stroke="none">
                         {incomeVsExpenseData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={index === 0 ? iveIncomeColor : iveExpenseColor} />
+                          <Cell key={`cell-${index}`} fill={index === 0 ? iveIncomeColor : iveExpenseColor} onClick={() => {
+                            const txns = filteredTransactions.filter(t => entry.name === 'Income' ? t.amount > 0 : t.amount < 0)
+                            openDrilldown(entry.name, txns)
+                          }} style={{ cursor: 'pointer' }} />
                         ))}
                       </Pie>
                     )}
@@ -825,19 +868,26 @@ export default function Dashboard() {
                     />
                     <Bar dataKey="value" name="Balance" radius={[0, 4, 4, 0]}>
                       {balData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} onClick={() => {
+                          const accId = filteredAccounts.find(a => a.name === entry.name)?.id
+                          const txns = accId ? filteredTransactions.filter(t => t.accountId === accId) : filteredTransactions
+                          openDrilldown(entry.name, txns)
+                        }} style={{ cursor: 'pointer' }} />
                       ))}
                     </Bar>
                   </BarChart>
                 ) : (
                     <PieChart>
                     <Pie data={balData} cx="50%" cy="50%"
-                      innerRadius={balChartType === 'donut' ? 50 : balChartType === 'pie' ? 0 : 40}
                       outerRadius={80}
                       paddingAngle={balChartType === 'pie' ? 0 : 2} dataKey="value" stroke="none"
                     >
                       {balData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} onClick={() => {
+                          const accId = filteredAccounts.find(a => a.name === entry.name)?.id
+                          const txns = accId ? filteredTransactions.filter(t => t.accountId === accId) : filteredTransactions
+                          openDrilldown(entry.name, txns)
+                        }} style={{ cursor: 'pointer' }} />
                       ))}
                     </Pie>
                     <RechartsTooltip formatter={(value) => `$${value.toLocaleString()}`}
@@ -951,7 +1001,14 @@ export default function Dashboard() {
                 />
                 <Bar dataKey="amount" name="Amount" radius={[4, 4, 0, 0]}>
                   {data.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} onClick={() => {
+                      const catId = Object.entries(categoryMap).find(([, v]) => v === entry.name)?.[0]
+                      let txns = filteredTransactions.filter(t => t.date?.startsWith(catMonth))
+                      if (catId) txns = txns.filter(t => t.categoryId === catId)
+                      if (catChartView === 'income') txns = txns.filter(t => t.amount > 0)
+                      else txns = txns.filter(t => t.amount < 0)
+                      openDrilldown(entry.name, txns)
+                    }} style={{ cursor: 'pointer' }} />
                   ))}
                 </Bar>
               </BarChart>
@@ -961,7 +1018,14 @@ export default function Dashboard() {
             <PieChart>
               <Pie data={data} cx="50%" cy="50%" innerRadius={catChartType === 'donut' ? 55 : catChartType === 'pie' ? 0 : 45} outerRadius={80} paddingAngle={catChartType === 'pie' ? 0 : 2} dataKey="amount" stroke="none">
                 {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} onClick={() => {
+                    const catId = Object.entries(categoryMap).find(([, v]) => v === entry.name)?.[0]
+                    let txns = filteredTransactions.filter(t => t.date?.startsWith(catMonth))
+                    if (catId) txns = txns.filter(t => t.categoryId === catId)
+                    if (catChartView === 'income') txns = txns.filter(t => t.amount > 0)
+                    else txns = txns.filter(t => t.amount < 0)
+                    openDrilldown(entry.name, txns)
+                  }} style={{ cursor: 'pointer' }} />
                 ))}
               </Pie>
               <RechartsTooltip formatter={(value, name) => [`$${value.toLocaleString()}`, name]}
@@ -1069,6 +1133,75 @@ export default function Dashboard() {
         const showLegend = customChart.showLegend ?? true
         const pieColors = [chartColor, ...CHART_COLORS.filter(c => c !== chartColor)]
 
+        if (customChart.type === 'numbers') {
+          const catIds = customChart.filterCategories || []
+          const filtered = filteredTransactions
+          let chartTxns = filtered
+          if (customChart.filterAccounts?.length > 0) chartTxns = chartTxns.filter(t => customChart.filterAccounts.includes(t.accountId))
+          const metric = customChart.metric || 'net'
+          if (metric === 'income') chartTxns = chartTxns.filter(t => t.amount > 0)
+          else if (metric === 'expenses') chartTxns = chartTxns.filter(t => t.amount < 0)
+          const categoryTotals = catIds.map(catId => ({
+            id: catId,
+            name: categoryMap[catId] || 'Other',
+            total: chartTxns.filter(t => t.categoryId === catId).reduce((s, t) => s + (metric === 'expenses' ? Math.abs(t.amount) : t.amount), 0),
+          }))
+          return (
+            <>
+              <Text fw={600} mb="sm">{customChart.title}</Text>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {categoryTotals.map(cat => (
+                  <Card key={cat.id} shadow="sm" padding="md" radius="md" withBorder style={{ cursor: 'pointer', flex: '1 1 120px', minWidth: 100 }} onClick={() => openDrilldown(cat.name, chartTxns.filter(t => t.categoryId === cat.id))}>
+                    <Text size="xs" tt="uppercase" fw={600} c="dimmed">{cat.name}</Text>
+                    <Text size="lg" fw={700} c={chartColor}>${Math.round(cat.total).toLocaleString()}</Text>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )
+        }
+
+        if (customChart.type === 'list') {
+          let txns = [...filteredTransactions]
+          if (customChart.filterCategories?.length > 0) txns = txns.filter(t => customChart.filterCategories.includes(t.categoryId))
+          if (customChart.filterAccounts?.length > 0) txns = txns.filter(t => customChart.filterAccounts.includes(t.accountId))
+          const datePreset = customChart.datePreset || 'all'
+          if (datePreset === 'month' && customChart.selectedMonth) {
+            txns = txns.filter(t => t.date && t.date.startsWith(customChart.selectedMonth))
+          } else if (datePreset !== 'all') {
+            const dr = getDateRange(datePreset, customChart.customStartDate, customChart.customEndDate)
+            if (dr.start) txns = txns.filter(t => t.date >= dr.start)
+            if (dr.end) txns = txns.filter(t => t.date <= dr.end)
+          }
+          const metric = customChart.metric || 'expenses'
+          if (metric === 'income') txns = txns.filter(t => t.amount > 0)
+          else if (metric === 'expenses') txns = txns.filter(t => t.amount < 0)
+          txns.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+          const limit = customChart.limit || 10
+          const listTxns = txns.slice(0, limit)
+          return (
+            <>
+              <Text fw={600} mb="sm">{customChart.title}</Text>
+              {listTxns.length > 0 ? (
+                <Stack gap="xs">
+                  {listTxns.map((t, i) => (
+                    <Group key={t.id} justify="space-between" style={{ cursor: 'pointer' }} onClick={() => openDrilldown(`${customChart.title} (#${i + 1})`, [t])}>
+                      <Group gap="xs" style={{ minWidth: 0, flex: 1 }}>
+                        <Text size="sm" fw={700} c="dimmed">{i + 1}.</Text>
+                        <div style={{ minWidth: 0 }}>
+                          <Text size="sm" truncate="end">{t.description || 'Transaction'}</Text>
+                          <Text size="xs" c="dimmed">{new Date(t.date).toLocaleDateString()} · {categoryMap[t.categoryId] || 'Uncategorized'}</Text>
+                        </div>
+                      </Group>
+                      <Text fw={600} c={metric === 'expenses' ? 'red' : 'green'} style={{ flexShrink: 0 }}>{metric === 'expenses' ? '-' : '+'}${Math.round(Math.abs(t.amount)).toLocaleString()}</Text>
+                    </Group>
+                  ))}
+                </Stack>
+              ) : <Text c="dimmed" ta="center" py="xl">No transactions</Text>}
+            </>
+          )
+        }
+
         return (
           <>
             <Text fw={600} mb="sm">{customChart.title}</Text>
@@ -1085,7 +1218,7 @@ export default function Dashboard() {
                       dataKey="value" stroke="none"
                     >
                       {data.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+                        <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} onClick={() => openDrilldown(`${customChart.title} — ${entry.name}`, getFilteredByGroup(customChart, entry.name))} style={{ cursor: 'pointer' }} />
                       ))}
                     </Pie>
                     <RechartsTooltip
@@ -1117,7 +1250,11 @@ export default function Dashboard() {
                       contentStyle={{ background: isDark ? '#252525' : '#fff', border: 'none', borderRadius: '8px' }}
                       itemStyle={{ color: isDark ? '#e5e5e5' : '#1e293b' }}
                     />
-                    <Bar dataKey="value" fill={chartColor} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                      {data.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={chartColor} onClick={() => openDrilldown(`${customChart.title} — ${entry.name}`, getFilteredByGroup(customChart, entry.name))} style={{ cursor: 'pointer' }} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 )}
               </ResponsiveContainer>
@@ -1145,8 +1282,8 @@ export default function Dashboard() {
         </Group>
       </Group>
 
-      <Card shadow="sm" padding="md" radius="md" withBorder mb="xl">
-        <Group gap="xs" wrap="wrap" align="end">
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 'var(--mantine-spacing-xl)' }}>
+        <Group gap="xs" wrap="wrap" style={{ flex: 1 }}>
           <Select
             label="Time Period"
             size="xs"
@@ -1184,20 +1321,21 @@ export default function Dashboard() {
             placeholder="All accounts"
             clearable
             w={220}
+            maxDisplayedTags={2}
           />
-          <Tooltip label="Create custom chart">
-            <ActionIcon variant="light" size="lg" onClick={() => { resetChartForm(); setChartModalOpen(true) }}>
-              <IconPlus size={18} />
-            </ActionIcon>
-          </Tooltip>
         </Group>
-      </Card>
+        <Tooltip label="Create custom chart">
+          <ActionIcon variant="light" size="lg" onClick={() => { resetChartForm(); setChartModalOpen(true) }}>
+            <IconPlus size={18} />
+          </ActionIcon>
+        </Tooltip>
+      </div>
 
       <SimpleGrid cols={{ base: 2, sm: 4 }} mb="xl">
         <StatCard label="Balance" value={totalBalance} icon={IconWallet} color="#475569" />
-        <StatCard label="Income" value={income} icon={IconArrowUpRight} color="#10b981" />
-        <StatCard label="Expenses" value={expenses} icon={IconArrowDownRight} color="#ef4444" />
-        <StatCard label="Savings" value={totalSavings} icon={IconPigMoney} color="#10b981" />
+        <StatCard label="Income" value={income} icon={IconArrowUpRight} color="#10b981" onClick={() => openDrilldown('Income', filteredTransactions.filter(t => t.amount > 0))} />
+        <StatCard label="Expenses" value={expenses} icon={IconArrowDownRight} color="#ef4444" onClick={() => openDrilldown('Expenses', filteredTransactions.filter(t => t.amount < 0))} />
+        <StatCard label="Savings" value={totalSavings} icon={IconPigMoney} color="#10b981" onClick={() => openDrilldown('All Transactions', filteredTransactions)} />
       </SimpleGrid>
 
       <div
@@ -1233,29 +1371,35 @@ export default function Dashboard() {
                 display: 'flex',
               }}
             >
-              <Card shadow="sm" padding="md" radius="md" withBorder style={{ flex: 1, minWidth: 0 }}>
+              <Card shadow="sm" padding="md" radius="md" withBorder style={{ flex: 1, minWidth: 0, overflow: 'hidden', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                 <Group justify="space-between" mb="sm" gap={4}>
                   <Group gap={6}>
                     <IconGripVertical
                       size={14}
                       style={{ color: isDark ? '#555' : '#adb5bd', cursor: 'grab', flexShrink: 0 }}
                     />
-                    {widgetId.startsWith('cc_') && (() => {
-                      const cc = (prefs.customCharts || []).find(c => c.id === widgetId)
-                      if (!cc) return null
-                      return (
-                        <Text size="xs" c="dimmed" style={{ fontFamily: 'monospace' }}>
-                          {cc.type === 'pie' ? '◔' : cc.type === 'bar' ? '▇' : '╱'} {cc.metric} · by {cc.groupBy}
-                        </Text>
-                      )
-                    })()}
                   </Group>
                   <Group gap={2} wrap="nowrap">
-                    {!widgetId.startsWith('cc_') && DEFAULT_WIDGET_SETTINGS[widgetId] && (
-                      <ActionIcon variant="subtle" size="sm" color="gray" onClick={() => setConfigModal({ open: true, widgetId })}>
-                        <IconSettings size={13} />
-                      </ActionIcon>
-                    )}
+                    {(() => {
+                      if (widgetId.startsWith('cc_')) {
+                        const cc = (prefs.customCharts || []).find(c => c.id === widgetId)
+                        if (cc) {
+                          return (
+                            <ActionIcon variant="subtle" size="sm" color="gray" onClick={() => openEditChart(cc)}>
+                              <IconSettings size={13} />
+                            </ActionIcon>
+                          )
+                        }
+                      }
+                      if (DEFAULT_WIDGET_SETTINGS[widgetId]) {
+                        return (
+                          <ActionIcon variant="subtle" size="sm" color="gray" onClick={() => setConfigModal({ open: true, widgetId })}>
+                            <IconSettings size={13} />
+                          </ActionIcon>
+                        )
+                      }
+                      return null
+                    })()}
                     <ActionIcon variant="subtle" size="sm" color="gray" onClick={() => cycleSize(widgetId)}>
                       <Text size="xs" fw={700} c="dimmed">{widgetLabel}</Text>
                     </ActionIcon>
@@ -1394,64 +1538,121 @@ export default function Dashboard() {
             onChange={(e) => setChartForm({ ...chartForm, title: e.target.value })}
             required
           />
-          <SimpleGrid cols={2}>
-            <Select
-              label="Chart Type"
-              data={[
-                { value: 'bar', label: 'Bar Chart' },
-                { value: 'line', label: 'Line Chart' },
-                { value: 'pie', label: 'Pie Chart' },
-                { value: 'donut', label: 'Donut' },
-              ]}
-              value={chartForm.type}
-              onChange={(val) => setChartForm({ ...chartForm, type: val })}
-            />
-            <Select
-              label="Metric"
-              data={[
-                { value: 'expenses', label: 'Expenses' },
-                { value: 'income', label: 'Income' },
-                { value: 'net', label: 'Net' },
-              ]}
-              value={chartForm.metric}
-              onChange={(val) => setChartForm({ ...chartForm, metric: val })}
-            />
-          </SimpleGrid>
-          <SimpleGrid cols={2}>
-            <Select
-              label="Group By"
-              data={[
-                { value: 'category', label: 'Category' },
-                { value: 'account', label: 'Account' },
-                { value: 'month', label: 'Month' },
-                { value: 'day', label: 'Day' },
-              ]}
-              value={chartForm.groupBy}
-              onChange={(val) => setChartForm({ ...chartForm, groupBy: val })}
-            />
-            <NumberInput
-              label="Max Items"
-              description="Items to show"
-              value={chartForm.limit}
-              onChange={(val) => setChartForm({ ...chartForm, limit: Math.max(2, Math.min(20, parseInt(val) || 8)) })}
-              min={2}
-              max={20}
-            />
-          </SimpleGrid>
+          <Select
+            label="Chart Type"
+            data={[
+              { value: 'bar', label: 'Bar Chart' },
+              { value: 'line', label: 'Line Chart' },
+              { value: 'pie', label: 'Pie Chart' },
+              { value: 'donut', label: 'Donut' },
+              { value: 'numbers', label: 'Numbers' },
+              { value: 'list', label: 'List' },
+            ]}
+            value={chartForm.type}
+            onChange={(val) => setChartForm({ ...chartForm, type: val })}
+          />
+          <Select
+            label="Metric"
+            data={[
+              { value: 'expenses', label: 'Expenses' },
+              { value: 'income', label: 'Income' },
+              { value: 'net', label: 'Net' },
+            ]}
+            value={chartForm.metric}
+            onChange={(val) => setChartForm({ ...chartForm, metric: val })}
+          />
+          {chartForm.type !== 'numbers' && chartForm.type !== 'list' && (
+            <>
+              <SimpleGrid cols={2}>
+                <Select
+                  label="Group By"
+                  data={[
+                    { value: 'category', label: 'Category' },
+                    { value: 'account', label: 'Account' },
+                    { value: 'month', label: 'Month' },
+                    { value: 'day', label: 'Day' },
+                  ]}
+                  value={chartForm.groupBy}
+                  onChange={(val) => setChartForm({ ...chartForm, groupBy: val })}
+                />
+                <NumberInput
+                  label="Max Items"
+                  description="Items to show"
+                  value={chartForm.limit}
+                  onChange={(val) => setChartForm({ ...chartForm, limit: Math.max(2, Math.min(20, parseInt(val) || 8)) })}
+                  min={2}
+                  max={20}
+                />
+              </SimpleGrid>
 
-          <Text size="sm" fw={600} mt="xs">Appearance</Text>
-          <SimpleGrid cols={2}>
-            <Select
-              label="Sort Order"
-              data={[
-                { value: 'value-desc', label: 'Value (High-Low)' },
-                { value: 'value-asc', label: 'Value (Low-High)' },
-                { value: 'name-asc', label: 'Name (A-Z)' },
-                { value: 'name-desc', label: 'Name (Z-A)' },
-              ]}
-              value={chartForm.sortOrder}
-              onChange={(val) => setChartForm({ ...chartForm, sortOrder: val })}
-            />
+              <Text size="sm" fw={600} mt="xs">Appearance</Text>
+              <SimpleGrid cols={2}>
+                <Select
+                  label="Sort Order"
+                  data={[
+                    { value: 'value-desc', label: 'Value (High-Low)' },
+                    { value: 'value-asc', label: 'Value (Low-High)' },
+                    { value: 'name-asc', label: 'Name (A-Z)' },
+                    { value: 'name-desc', label: 'Name (Z-A)' },
+                  ]}
+                  value={chartForm.sortOrder}
+                  onChange={(val) => setChartForm({ ...chartForm, sortOrder: val })}
+                />
+              </SimpleGrid>
+            </>
+          )}
+          {chartForm.type === 'list' && (
+            <>
+              <NumberInput
+                label="Max Items"
+                description="Transactions to show"
+                value={chartForm.limit}
+                onChange={(val) => setChartForm({ ...chartForm, limit: Math.max(1, Math.min(50, parseInt(val) || 10)) })}
+                min={1}
+                max={50}
+              />
+              <Select
+                label="Date Range"
+                data={[
+                  { value: 'all', label: 'All Time' },
+                  { value: '30d', label: 'Last 30 Days' },
+                  { value: '90d', label: 'Last 3 Months' },
+                  { value: '1y', label: 'Last Year' },
+                  { value: 'month', label: 'Specific Month' },
+                  { value: 'custom', label: 'Custom Range' },
+                ]}
+                value={chartForm.datePreset}
+                onChange={(val) => setChartForm({ ...chartForm, datePreset: val })}
+              />
+              {chartForm.datePreset === 'month' && (
+                <Select
+                  label="Month"
+                  placeholder="Select month"
+                  data={monthOptions}
+                  value={chartForm.selectedMonth}
+                  onChange={(val) => setChartForm({ ...chartForm, selectedMonth: val })}
+                  searchable
+                />
+              )}
+              {chartForm.datePreset === 'custom' && (
+                <SimpleGrid cols={2}>
+                  <TextInput
+                    label="Start Date"
+                    type="date"
+                    value={chartForm.customStartDate}
+                    onChange={(e) => setChartForm({ ...chartForm, customStartDate: e.target.value })}
+                  />
+                  <TextInput
+                    label="End Date"
+                    type="date"
+                    value={chartForm.customEndDate}
+                    onChange={(e) => setChartForm({ ...chartForm, customEndDate: e.target.value })}
+                  />
+                </SimpleGrid>
+              )}
+            </>
+          )}
+          {chartForm.type !== 'numbers' && chartForm.type !== 'list' && (
             <SegmentedControl
               fullWidth
               size="xs"
@@ -1461,9 +1662,8 @@ export default function Dashboard() {
                 { label: 'Legend', value: 'show' },
                 { label: 'No Legend', value: 'hide' },
               ]}
-              style={{ alignSelf: 'flex-end' }}
             />
-          </SimpleGrid>
+          )}
           <Group gap={6}>
             {COLOR_OPTIONS.map(c => (
               <div
@@ -1584,6 +1784,31 @@ export default function Dashboard() {
 
           return <Text c="dimmed" size="sm">No customization available for this widget.</Text>
         })()}
+      </Modal>
+
+      <Modal
+        opened={drilldown.open}
+        onClose={() => setDrilldown({ ...drilldown, open: false })}
+        title={drilldown.title}
+        size="lg"
+      >
+        {drilldown.transactions.length === 0 ? (
+          <Text c="dimmed" ta="center" py="xl">No transactions</Text>
+        ) : (
+          <Stack gap="sm">
+            {drilldown.transactions.map(t => (
+              <Group key={t.id} justify="space-between" wrap="nowrap">
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <Text size="sm" fw={500} lineClamp={1}>{t.description || 'Transaction'}</Text>
+                  <Text size="xs" c="dimmed">{new Date(t.date).toLocaleDateString()} · {categoryMap[t.categoryId] || 'Uncategorized'} · {accountMap[t.accountId] || 'Unknown'}</Text>
+                </div>
+                <Text fw={600} c={t.amount >= 0 ? 'green' : 'red'} style={{ flexShrink: 0 }}>
+                  {t.amount >= 0 ? '+' : ''}${Math.abs(t.amount).toFixed(2)}
+                </Text>
+              </Group>
+            ))}
+          </Stack>
+        )}
       </Modal>
     </div>
   )
