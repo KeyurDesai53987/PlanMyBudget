@@ -1,5 +1,26 @@
 const API_BASE = '/api'
 
+const cache = new Map()
+const CACHE_TTL = 30000
+
+function cacheKey(path) {
+  return path.split('?')[0].replace(/\/+$/, '')
+}
+
+function getCached(key) {
+  const entry = cache.get(key)
+  if (!entry) return null
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    cache.delete(key)
+    return null
+  }
+  return entry.data
+}
+
+function setCached(key, data) {
+  cache.set(key, { data, timestamp: Date.now() })
+}
+
 function getStoredToken() {
   return localStorage.getItem('saveit_token')
 }
@@ -17,6 +38,18 @@ export function clearToken() {
 }
 
 export async function api(path, options = {}) {
+  const method = (options.method || 'GET').toUpperCase()
+  const key = cacheKey(path)
+
+  if (method === 'GET' && !options.skipCache) {
+    const cached = getCached(key)
+    if (cached) return cached
+  }
+
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    cache.clear()
+  }
+
   const token = getStoredToken()
   const headers = options.headers || {}
   if (token) headers['Authorization'] = `Bearer ${token}`
@@ -24,13 +57,24 @@ export async function api(path, options = {}) {
     headers['Content-Type'] = 'application/json'
   }
   options.headers = headers
-  
+
   const res = await fetch(API_BASE + path, options)
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Unknown error' }))
-    throw new Error(err.error || 'Request failed')
+    const text = await res.text()
+    let err
+    try { err = JSON.parse(text) } catch { err = { error: text || 'Unknown error' } }
+    console.error(`API ${method} ${path} ${res.status}:`, err)
+    throw new Error(err.error || err.detail || err.message || 'Request failed')
   }
-  return res.json()
+  const data = await res.json()
+
+  if (method === 'GET') setCached(key, data)
+
+  return data
+}
+
+export function clearCache() {
+  cache.clear()
 }
 
 export async function login(email, password) {
@@ -88,6 +132,7 @@ export async function googleAuth(credential) {
 export function logout() {
   clearToken()
   clearDemoEmail()
+  clearCache()
 }
 
 export async function loginAsDemo() {

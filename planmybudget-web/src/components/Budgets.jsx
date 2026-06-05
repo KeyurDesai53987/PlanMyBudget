@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card, Group, Text, Stack, TextInput, NumberInput, Select, Button, ActionIcon, SimpleGrid, Modal, Progress, Collapse, Badge, useMantineColorScheme } from '@mantine/core'
 import { IconPlus, IconTrash, IconCalendar, IconEdit, IconAlertTriangle, IconChevronDown, IconChevronUp, IconArrowDownRight, IconRefresh } from '@tabler/icons-react'
 import { api } from '../api'
@@ -46,7 +46,7 @@ export default function Budgets() {
     await loadData()
   }
 
-  const categoryMap = categories.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {})
+  const categoryMap = useMemo(() => categories.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {}), [categories])
 
   const getSpentAmount = (categoryId, month, year) => {
     const categoryName = categoryMap[categoryId]
@@ -126,7 +126,7 @@ export default function Budgets() {
       open: true, 
       budget: { 
         ...budget, 
-        lines: budget.lines.map(l => ({ 
+        lines: (budget.lines || []).map(l => ({ 
           categoryId: l.categoryId && categoryMap[l.categoryId] ? l.categoryId : (Object.keys(categoryMap).find(key => categoryMap[key] === l.categoryId) || l.categoryId || ''), 
           amount: l.amount || '' 
         }))
@@ -135,7 +135,7 @@ export default function Budgets() {
   }
 
   const handleEditLineChange = (index, field, value) => {
-    const newLines = [...editModal.budget.lines]
+    const newLines = [...(editModal.budget.lines || [])]
     newLines[index][field] = value
     setEditModal({ ...editModal, budget: { ...editModal.budget, lines: newLines } })
   }
@@ -143,12 +143,12 @@ export default function Budgets() {
   const handleEditAddLine = () => {
     setEditModal({ 
       ...editModal, 
-      budget: { ...editModal.budget, lines: [...editModal.budget.lines, { categoryId: '', amount: '' }] }
+      budget: { ...editModal.budget, lines: [...(editModal.budget.lines || []), { categoryId: '', amount: '' }] }
     })
   }
 
   const handleEditRemoveLine = (index) => {
-    const newLines = editModal.budget.lines.filter((_, idx) => idx !== index)
+    const newLines = (editModal.budget.lines || []).filter((_, idx) => idx !== index)
     setEditModal({ ...editModal, budget: { ...editModal.budget, lines: newLines } })
   }
 
@@ -156,7 +156,7 @@ export default function Budgets() {
     if (!editModal.budget) return
     setSubmitting(true)
     try {
-      const lines = editModal.budget.lines.map(l => ({ categoryId: l.categoryId, amount: parseFloat(l.amount) || 0 }))
+      const lines = (editModal.budget.lines || []).map(l => ({ categoryId: l.categoryId, amount: parseFloat(l.amount) || 0 }))
       await api(`/budgets/${editModal.budget.id}`, { 
         method: 'PUT', 
         body: JSON.stringify({ 
@@ -275,8 +275,8 @@ export default function Budgets() {
 
       <SimpleGrid cols={{ base: 1, sm: 2 }}>
         {sortedBudgets.length > 0 ? sortedBudgets.map((budget, index) => {
-          const total = budget.lines.reduce((sum, l) => sum + (l.amount || 0), 0)
-          const totalSpent = budget.lines.reduce((sum, l) => sum + getSpentAmount(l.categoryId, budget.month, budget.year), 0)
+          const total = (budget.lines || []).reduce((sum, l) => sum + (l.amount || 0), 0)
+          const totalSpent = (budget.lines || []).reduce((sum, l) => sum + getSpentAmount(l.categoryId, budget.month, budget.year), 0)
           const overallStatus = getBudgetStatus(totalSpent, total)
           const currentMonth = new Date().getFullYear() === budget.year && new Date().getMonth() + 1 === budget.month
           const isExpanded = expandedBudgets[budget.id] !== undefined ? expandedBudgets[budget.id] : currentMonth
@@ -318,14 +318,14 @@ export default function Budgets() {
                 </Group>
                 
                 <Progress 
-                value={Math.min((totalSpent / total) * 100, 100)} 
+                value={total > 0 ? Math.min((totalSpent / total) * 100, 100) : 0} 
                 color={overallStatus.color} 
                 size="sm" 
                 mb="md"
               />
               
               <Stack gap="xs">
-                {budget.lines.map((line, i) => {
+                {(budget.lines || []).map((line, i) => {
                   const categoryId = line.categoryId
                   const categoryName = categoryMap[categoryId] || categoryId || 'Unknown'
                   const spent = getSpentAmount(categoryId, budget.month, budget.year)
@@ -404,7 +404,7 @@ export default function Budgets() {
             </SimpleGrid>
             
             <Text size="sm" fw={500}>Categories</Text>
-            {editModal.budget.lines.map((line, i) => (
+            {(editModal.budget.lines || []).map((line, i) => (
               <Group key={i} gap="sm">
                 <Select
                   placeholder="Select category"
@@ -423,7 +423,7 @@ export default function Budgets() {
                   hideControls
                   style={{ width: 100 }}
                 />
-                {editModal.budget.lines.length > 1 && (
+                {(editModal.budget.lines || []).length > 1 && (
                   <ActionIcon variant="subtle" color="red" onClick={() => handleEditRemoveLine(i)}>
                     <IconTrash size={16} />
                   </ActionIcon>

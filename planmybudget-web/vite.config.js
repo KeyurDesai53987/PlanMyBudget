@@ -117,7 +117,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://saveit-r1gc.onrender.com',
+        target: 'http://localhost:4000',
         changeOrigin: true,
       },
     },
